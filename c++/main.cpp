@@ -39,7 +39,7 @@ void setxy(
   std::vector<double> &yc, double ylngth, double ypert
 );
 void setqud(
-  std::vector<double> area, std::vector<int> &isotri, int iwrite,
+  std::vector<double> &area, std::vector<int> &isotri, int iwrite,
   int nelemn, int nnodes, std::vector<std::vector<int>> &node,
   int n_points, int nquad,
   std::vector<double> &xc, std::vector<std::vector<double>> &xm,
@@ -1115,7 +1115,8 @@ std::vector<double> linsys(
   );  // This is 1-indexed offset to main diagonal row in band storage
   double visc = 1.0 / reynld;
   int ip, ihor, iver, iprs;
-  int ipp, bbb, bbx, bby;
+  int ipp;
+  double bbb, bbx, bby;
   int ju, jv, jp, iuse, info;
 
   for (int i = 0; i < neqn; i++) {
@@ -2212,7 +2213,7 @@ void setlin(
 //*  SETQUD - set midpoint quadrature rule information
 //* --------------------------------------------------------------------
 void setqud(
-  std::vector<double> area, std::vector<int> &isotri, int iwrite,
+  std::vector<double> &area, std::vector<int> &isotri, int iwrite,
   int nelemn, int nnodes, std::vector<std::vector<int>> &node,
   int n_points, int nquad,
   std::vector<double> &xc, std::vector<std::vector<double>> &xm,
