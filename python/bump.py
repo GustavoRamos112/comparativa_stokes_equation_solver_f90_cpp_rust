@@ -38,7 +38,9 @@ def main() -> int:
   nnodes = 6
   nquad = 3
 
-  a: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros((maxrow, maxeqn), dtype=np.float64)
+  a: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(
+    (maxrow, maxeqn), dtype=np.float64
+  )
   anew = 0.0
   anext = 0.3
   aold = 0.0
@@ -52,7 +54,7 @@ def main() -> int:
   indx = np.zeros((n_points, 2), dtype=np.int32)
   insc = np.zeros(n_points, dtype=np.int32)
   isotri = np.zeros(nelemn, dtype=np.int32)
-  iwrite = 1
+  iwrite = 10
   long = False
   nband = 0
   neqn = 0
@@ -217,12 +219,12 @@ def main() -> int:
   )
 
   xy_file = file_name_inc(xy_file)
-  #xy_unit = get_unit()
+  # xy_unit = get_unit()
   with open(xy_file, "w") as f_xy:
     xy_write(f_xy, n_points, xc, yc)
 
   uv_file = file_name_inc(uv_file)
-  #uv_unit = get_unit()
+  # uv_unit = get_unit()
   with open(uv_file, "w") as f_uv:
     uv_write(f, indx, f_uv, neqn, n_points, yc)
 
@@ -333,12 +335,12 @@ def main() -> int:
       rjpnew += 2.0 * dcda[i] * temp
 
     xy_file = file_name_inc(xy_file)
-    #xy_unit = get_unit()
+    # xy_unit = get_unit()
     with open(xy_file, "w") as f_xy:
       xy_write(f_xy, n_points, xc, yc)
 
     uv_file = file_name_inc(uv_file)
-    #uv_unit = get_unit()
+    # uv_unit = get_unit()
     with open(uv_file, "w") as f_uv:
       uv_write(f, indx, f_uv, neqn, n_points, yc)
 
@@ -367,8 +369,8 @@ def main() -> int:
     if abs(anew - aold) <= abs(anew) * tolsec and 1 < iter:
       print("Secant iteration converged.")
       break
-  else:
-    print("  Secant iteration failed to converge.")
+    else:
+      print("  Secant iteration failed to converge.")
 
   cpu2 = time.time()
   print()
@@ -617,14 +619,14 @@ def dscal(n, sa, x, incx):
 # --------------------------------------------------------------------
 #  FILE_NAME_INC - increment a partially numeric filename
 # --------------------------------------------------------------------
-def file_name_inc(file_name):
+def file_name_inc(file_name: str) -> str:
   if not file_name:
     print()
     print("FILE_NAME_INC - Fatal error!")
     print("  The input string is empty.")
     sys.exit(1)
 
-  name_list = list(file_name)
+  name_list: list[str] = list(file_name)
   change = 0
 
   for i in range(len(name_list) - 1, -1, -1):
@@ -649,13 +651,11 @@ def file_name_inc(file_name):
 # --------------------------------------------------------------------
 #  GET_UNIT - return a free FORTRAN unit number (mocked for Python)
 # --------------------------------------------------------------------
-_next_unit = 10
-
-
-def get_unit():
-  global _next_unit
-  _next_unit += 1
-  return _next_unit
+# _next_unit = 10
+# def get_unit():
+#  global _next_unit
+#  _next_unit += 1
+#  return _next_unit
 
 
 # --------------------------------------------------------------------
@@ -2204,7 +2204,7 @@ def uv_write(f, indx, uv_file_obj, neqn, n_points, yc):
 # --------------------------------------------------------------------
 #  XY_WRITE - write node coordinate data
 # --------------------------------------------------------------------
-def xy_write(xy_file_obj, n_points, xc, yc):
+def xy_write(xy_file_obj, n_points: int, xc: np.ndarray, yc: np.ndarray) -> None:
   for ip in range(n_points):
     xy_file_obj.write(f"  {xc[ip]:14.6e}  {yc[ip]:14.6e}\n")
 
