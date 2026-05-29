@@ -49,7 +49,7 @@ void setqud(
   std::vector<double> &yc, std::vector<std::vector<double>> &ym
 );
 void setbas(
-  std::vector<int> isotri, int nelemn, int nnodes, 
+  const std::vector<int> &isotri, int nelemn, int nnodes, 
   std::vector<std::vector<int>> &node, int n_points, int nquad, 
   std::vector<std::vector<std::vector<std::vector<double>>>> &phi, 
   std::vector<std::vector<std::vector<double>>> &psi, 
@@ -214,10 +214,10 @@ void gram(
   std::vector<std::vector<int>> &indx, 
   int iwrite, int my, int nelemn, 
   int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, std::vector<double> r, 
-  std::vector<double> uprof, 
-  std::vector<double> xc, double xprof, 
-  std::vector<double> yc
+  int n_points, std::vector<double> &r, 
+  std::vector<double> &uprof, 
+  std::vector<double> &xc, double xprof, 
+  std::vector<double> &yc
 );
 std::string file_name_inc(std::string file_name);
 void xy_write(
@@ -435,7 +435,8 @@ int main(void)
     g[i] = 0.0;
   }
   
-  for (int iter = 1; iter <= maxsec; iter++) {
+  int iter;
+  for (iter = 1; iter <= maxsec; iter++) {
     std::println();
     std::println("Secant iteration {}", iter);
 
@@ -464,7 +465,7 @@ int main(void)
       std::println("Velocity profile:");
       std::println();
       for (int i = 0; i < my; i++) {
-        std::print("{}", uprof[i]);
+        std::print("{}\t", uprof[i]);
         if ((i + 1) % 5 == 0) std::println();
       }
       std::println();
@@ -486,7 +487,7 @@ int main(void)
       std::println("Sensitivities:");
       std::println();
       for (int i = 0; i < my; i++) {
-        std::print("{}", dcda[i]);
+        std::print("{}\t", dcda[i]);
         if ((i + 1) % 5 == 0) {
           std::println();
         }
@@ -544,9 +545,9 @@ int main(void)
       std::println("Secant iteration converged.");
       break;
     }
-    else
-      std::println("  Secant iteration failed to converge.");
   }
+  if (maxsec < iter)
+    std::println("  Secant iteration failed to converge.");
 
   auto fin = std::chrono::high_resolution_clock::now();
   auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
@@ -942,10 +943,10 @@ void gram(
   std::vector<std::vector<int>> &indx, 
   int iwrite, int my, int nelemn, 
   int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, std::vector<double> r, 
-  std::vector<double> uprof, 
-  std::vector<double> xc, double xprof, 
-  std::vector<double> yc
+  int n_points, std::vector<double> &r, 
+  std::vector<double> &uprof, 
+  std::vector<double> &xc, double xprof, 
+  std::vector<double> &yc
 ) {
   std::vector<double> wt = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
   //wt = np.array([5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0], dtype=np.float64)
@@ -1818,8 +1819,8 @@ void resid(
   res[neqn - 1] = g[neqn - 1];
 
   double rmax = 0.0;
-  double imax = 0;
-  double ibad = 0;
+  int imax = 0;
+  int ibad = 0;
   double test;
 
   for (int i = 0; i < neqn; i++) {
@@ -1937,7 +1938,7 @@ std::tuple<int, int, int> setban(
 //*  SETBAS - evaluate basis functions at each integration point
 //* --------------------------------------------------------------------
 void setbas(
-  std::vector<int> isotri, int nelemn, int nnodes, 
+  const std::vector<int> &isotri, int nelemn, int nnodes, 
   std::vector<std::vector<int>> &node, int n_points, int nquad, 
   std::vector<std::vector<std::vector<std::vector<double>>>> &phi, 
   std::vector<std::vector<std::vector<double>>> &psi, 
