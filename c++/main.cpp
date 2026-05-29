@@ -1,6 +1,6 @@
-// --------------------------------------------------------------------
-//  Main program
-// --------------------------------------------------------------------
+//* --------------------------------------------------------------------
+//*  Main program
+//* --------------------------------------------------------------------
 
 #include <vector>
 #include <string>
@@ -10,6 +10,9 @@
 
 #include <format>
 #include <print>
+
+#include <fstream>
+#include <iomanip>
 
 #include <cstdlib>
 #include <cmath>
@@ -72,6 +75,7 @@ inline int i4_modp(int i, int j);
 inline int i4_wrap(int ival, int ilo, int ihi);
 inline double ubdry(int iuk, double yy);
 inline double refbsp(double xq, double yq, int iq);
+inline int igetl(int i, std::vector<int> &iline, int my);
 std::tuple<double, double, double> refqbf(
   double x, double y, int inn, 
   double etax, double etay, 
@@ -188,6 +192,60 @@ double ddot(
   int col, int row_start, int incx, 
   const std::vector<double> &b, int start_b, int incy
 );
+void resid(
+  std::vector<double> &area, std::vector<double> &g,
+  std::vector<std::vector<int>> &indx,
+  std::vector<int> &insc, std::vector<int> &isotri,
+  int iwrite, int nelemn, int neqn,
+  int nnodes, std::vector<std::vector<int>> &node,
+  int n_points, int nquad,
+  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
+  std::vector<std::vector<std::vector<double>>> &psi, 
+  std::vector<double> &res, double reynld, 
+  std::vector<double> &xc, std::vector<std::vector<double>> &xm, 
+  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+);
+std::vector<double> getg(
+  std::vector<double> &f, std::vector<int> &iline, int my, int neqn
+);
+void gram(
+  std::vector<std::vector<double>> &gr, 
+  std::vector<int> &iline, 
+  std::vector<std::vector<int>> &indx, 
+  int iwrite, int my, int nelemn, 
+  int nnodes, std::vector<std::vector<int>> &node, 
+  int n_points, std::vector<double> r, 
+  std::vector<double> uprof, 
+  std::vector<double> xc, double xprof, 
+  std::vector<double> yc
+);
+std::string file_name_inc(std::string file_name);
+void xy_write(
+  std::ofstream& xy_file_obj, int n_points, 
+  std::vector<double>& xc, std::vector<double>& yc
+);
+void uv_write(
+  const std::vector<double>& f, 
+  const std::vector<std::vector<int>>& indx, 
+  std::ofstream& uv_file_obj, 
+  int neqn, int n_points, 
+  const std::vector<double>& yc
+);
+std::vector<double> linsys(
+  std::vector<std::vector<double>> &a, 
+  std::vector<double> &area,
+  std::vector<double> &f, std::vector<double> &g,
+  std::vector<std::vector<int>> &indx,
+  std::vector<int> &insc, std::vector<int> &isotri,
+  int itype, int maxrow, int nband,
+  int nelemn, int neqn, int nlband,
+  int nnodes, std::vector<std::vector<int>> &node,
+  int n_points, int nquad, int nrow,
+  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
+  std::vector<std::vector<std::vector<double>>> &psi, double reynld,
+  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
+  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+);
 //* -------------------------------------------------------------------
 
 int main(void)
@@ -265,6 +323,8 @@ int main(void)
   double ylngth = 3.0;
   std::vector<std::vector<double>> ym(nelemn, std::vector<double>(nquad, 0.0));
   double ypert = 0.0;
+  int itype;
+  double temp, denom, test;
 
   auto inicio = std::chrono::high_resolution_clock::now();
 
@@ -319,219 +379,174 @@ int main(void)
   }
 
   numnew = nstoke(
-    a,
-    area,
-    f, g,
-    indx,
-    insc, isotri,
+    a, area, f, g, indx, insc, isotri,
     maxnew, maxrow, nband,
     nelemn, neqn, nlband,
-    nnodes,
-    node,
-    n_points, nquad, nrow,
-    numnew,
-    phi,
-    psi,
-    reynld, tolnew,
-    xc,
-    xm,
-    yc,
-    ym
+    nnodes, node, n_points, nquad, nrow,
+    numnew, phi, psi, reynld, tolnew,
+    xc, xm, yc, ym
   );
   
-  //resid(
-  //  area,
-  //  g,
-  //  indx,
-  //  insc,
-  //  isotri,
-  //  iwrite,
-  //  nelemn,
-  //  neqn,
-  //  nnodes,
-  //  node,
-  //  n_points,
-  //  nquad,
-  //  phi,
-  //  psi,
-  //  res,
-  //  reynld,
-  //  xc,
-  //  xm,
-  //  yc,
-  //  ym,
-  //)
+  resid(
+    area, g, indx, insc, isotri,
+    iwrite, nelemn, neqn, nnodes, node, n_points,
+    nquad, phi, psi, res, reynld, xc,
+    xm, yc, ym
+  );
 
-  //uprof = getg(g, iline, my, neqn)
+  uprof = getg(g, iline, my, neqn);
 
-  //if (1 <= iwrite) {
-  //  std::println();
-  //  std::println("Velocity profile:");
-  //  std::println();
-  //  for (int i = 0; i < my; i++) {
-  //    std::print("{}", uprof[i]);
-  //    if ((i + 1) % 5 == 0)
-  //      std::println();
-  //  std::println();
-  //}
+  if (1 <= iwrite) {
+    std::println();
+    std::println("Velocity profile:");
+    std::println();
+    for (int i = 0; i < my; i++) {
+      std::print("{}\t", uprof[i]);
+      if ((i + 1) % 5 == 0)
+        std::println();
+    }
+    std::println();
+  }
 
-  //gram(
-  //  gr, iline, indx, iwrite, my, nelemn, nnodes, node, n_points, r, uprof, xc, xprof, yc
-  //)
+  gram(
+    gr, iline, indx, iwrite, my, nelemn, 
+    nnodes, node, n_points, r, uprof, xc, xprof, yc
+  );
 
-  //xy_file = file_name_inc(xy_file)
-  ////xy_unit = get_unit()
-  //with open(xy_file, "w"); as f_xy:
-  //  xy_write(f_xy, n_points, xc, yc)
-  //
-  //uv_file = file_name_inc(uv_file)
-  ////uv_unit = get_unit()
-  //with open(uv_file, "w"); as f_uv:
-  //  uv_write(f, indx, f_uv, neqn, n_points, yc)
-  //
+  xy_file = file_name_inc(xy_file);
+
+  std::ofstream f_xy(xy_file); // Abre el archivo en modo escritura
+  if (f_xy.is_open()) {
+    xy_write(f_xy, n_points, xc, yc);
+    f_xy.close();
+  }
+
+  uv_file = file_name_inc(uv_file);
+  //uv_unit = get_unit()
+  std::ofstream f_uv(uv_file);
+  if (f_uv.is_open()) {
+    // Llamada a uv_write con los parámetros correctos
+    uv_write(f, indx, f_uv, neqn, n_points, yc);
+    f_uv.close();
+  }
+
   //g[:neqn] = 0.0
-  //
-  //for iter in range(1, maxsec + 1):
-  //  std::println();
-  //  std::println(f"Secant iteration {iter}");
-  //
-  //  numsec += 1
-  //
-  //  ypert = anew
-  //  setxy(iwrite, _long, mx, my, n_points, nx, ny, xc, xlngth, yc, ylngth, ypert)
-  //
-  //  setqud(area, isotri, iwrite, nelemn, nnodes, node, n_points, nquad, xc, xm, yc, ym)
-  //
-  //  setbas(isotri, nelemn, nnodes, node, n_points, nquad, phi, psi, xc, xm, yc, ym)
-  //
-  //  numnew = nstoke(
-  //    a,
-  //    area,
-  //    f,
-  //    g,
-  //    indx,
-  //    insc,
-  //    isotri,
-  //    maxnew,
-  //    maxrow,
-  //    nband,
-  //    nelemn,
-  //    neqn,
-  //    nlband,
-  //    nnodes,
-  //    node,
-  //    n_points,
-  //    nquad,
-  //    nrow,
-  //    numnew,
-  //    phi,
-  //    psi,
-  //    reynld,
-  //    tolnew,
-  //    xc,
-  //    xm,
-  //    yc,
-  //    ym,
-  //  )
-  //
-  //  uprof = getg(g, iline, my, neqn)
-  //
-  //  if 1 <= iwrite:
-  //    std::println();
-  //    std::println("Velocity profile:");
-  //    std::println();
-  //    for i in range(my):
-  //      std::println(f"{uprof[i]:14.6e}", end="");
-  //      if (i + 1) % 5 == 0:
-  //        std::println();
-  //    std::println();
-  //
-  //  itype = -2
-  //
-  //  sens = linsys(
-  //    a,
-  //    area,
-  //    sens,
-  //    g,
-  //    indx,
-  //    insc,
-  //    isotri,
-  //    itype,
-  //    maxrow,
-  //    nband,
-  //    nelemn,
-  //    neqn,
-  //    nlband,
-  //    nnodes,
-  //    node,
-  //    n_points,
-  //    nquad,
-  //    nrow,
-  //    phi,
-  //    psi,
-  //    reynld,
-  //    xc,
-  //    xm,
-  //    yc,
-  //    ym,
-  //  )
-  //
-  //  dcda = getg(sens, iline, my, neqn)
-  //
-  //  if 2 <= iwrite:
-  //    std::println();
-  //    std::println("Sensitivities:");
-  //    std::println();
-  //    for i in range(my):
-  //      std::println(f"{dcda[i]:14.6e}", end="");
-  //      if (i + 1) % 5 == 0:
-  //        std::println();
-  //    std::println();
-  //
-  //  rjpnew = 0.0
-  //  for i in range(my):
-  //    temp = -r[i]
-  //    for j in range(my):
-  //      temp += gr[i, j] * uprof[j]
-  //    rjpnew += 2.0 * dcda[i] * temp
-  //
-  //  xy_file = file_name_inc(xy_file)
-  //  #xy_unit = get_unit()
-  //  with open(xy_file, "w"); as f_xy:
-  //    xy_write(f_xy, n_points, xc, yc)
-  //
-  //  uv_file = file_name_inc(uv_file)
-  //  #uv_unit = get_unit()
-  //  with open(uv_file, "w"); as f_uv:
-  //    uv_write(f, indx, f_uv, neqn, n_points, yc)
-  //
-  //  std::println();
-  //  std::println(f"  Parameter = {anew}, J prime = {rjpnew}");
-  //
-  //  if 1 < iter:
-  //    denom = rjpnew - rjpold
-  //    if abs(denom) > 1e-30:
-  //      anext = aold - rjpold * (anew - aold) / denom
-  //    else:
-  //      anext = anew
-  //
-  //  aold = anew
-  //  anew = anext
-  //  rjpold = rjpnew
-  //
-  //  if anew != 0.0:
-  //    test = abs(anew - aold) / anew
-  //  else:
-  //    test = 0.0
-  //
-  //  std::println(f"  New value of parameter = {anew}");
-  //  std::println(f"  Convergence test = {test}");
-  //
-  //  if abs(anew - aold) <= abs(anew) * tolsec and 1 < iter:
-  //    std::println("Secant iteration converged.");
-  //    break
-  //else:
-  //  std::println("  Secant iteration failed to converge.");;
+  for(int i = 0; i < neqn; i++) {
+    g[i] = 0.0;
+  }
+  
+  for (int iter = 1; iter <= maxsec; iter++) {
+    std::println();
+    std::println("Secant iteration {}", iter);
+
+    numsec += 1;
+
+    ypert = anew;
+    setxy(iwrite, _long, mx, my, n_points, nx, ny, xc, xlngth, yc, ylngth, ypert);
+
+    setqud(area, isotri, iwrite, nelemn, nnodes, node, n_points, nquad, xc, xm, yc, ym);
+
+    setbas(isotri, nelemn, nnodes, node, n_points, nquad, phi, psi, xc, xm, yc, ym);
+
+    numnew = nstoke(
+      a, area, f, g, indx, insc,
+      isotri, maxnew, maxrow, nband,
+      nelemn, neqn, nlband, nnodes, node, 
+      n_points, nquad, nrow, numnew, phi,
+      psi, reynld, tolnew, xc,
+      xm, yc, ym
+    );
+
+    uprof = getg(g, iline, my, neqn);
+
+    if (1 <= iwrite) {
+      std::println();
+      std::println("Velocity profile:");
+      std::println();
+      for (int i = 0; i < my; i++) {
+        std::print("{}", uprof[i]);
+        if ((i + 1) % 5 == 0) std::println();
+      }
+      std::println();
+    }
+
+    itype = -2;
+
+    sens = linsys(
+      a, area, sens, g, indx, insc, isotri, itype, maxrow,
+      nband, nelemn, neqn, nlband, nnodes, node,
+      n_points, nquad, nrow, phi, psi,
+      reynld, xc, xm, yc, ym
+    );
+
+    dcda = getg(sens, iline, my, neqn);
+
+    if (2 <= iwrite) {
+      std::println();
+      std::println("Sensitivities:");
+      std::println();
+      for (int i = 0; i < my; i++) {
+        std::print("{}", dcda[i]);
+        if ((i + 1) % 5 == 0) {
+          std::println();
+        }
+      }
+      std::println();
+    }
+
+    rjpnew = 0.0;
+    for (int i = 0; i < my; i++) {
+      temp = -r[i];
+      for (int j = 0; j < my; j++) {
+        temp += gr[i][j] * uprof[j];
+      }
+      rjpnew += 2.0 * dcda[i] * temp;
+    }
+
+    xy_file = file_name_inc(xy_file);
+
+    std::ofstream f_xy(xy_file); // Abre el archivo en modo escritura
+    if (f_xy.is_open()) {
+      xy_write(f_xy, n_points, xc, yc);
+      f_xy.close();
+    }
+
+    uv_file = file_name_inc(uv_file);
+    //uv_unit = get_unit()
+    std::ofstream f_uv(uv_file);
+    if (f_uv.is_open()) {
+      // Llamada a uv_write con los parámetros correctos
+      uv_write(f, indx, f_uv, neqn, n_points, yc);
+      f_uv.close();
+    }
+
+    std::println();
+    std::println("  Parameter = {}, J prime = {}", anew, rjpnew);
+
+    if (1 < iter) {
+      denom = rjpnew - rjpold;
+      if (std::abs(denom) > 1e-30) 
+        anext = aold - rjpold * (anew - aold) / denom;
+      else anext = anew;
+    }
+
+    aold = anew;
+    anew = anext;
+    rjpold = rjpnew;
+
+    if (anew != 0.0) test = abs(anew - aold) / anew;
+    else test = 0.0;
+
+    std::println("  New value of parameter = {}", anew);
+    std::println("  Convergence test = {}", test);
+
+    if ((std::abs(anew - aold) <= std::abs(anew) * tolsec) and (1 < iter)) {
+      std::println("Secant iteration converged.");
+      break;
+    }
+    else
+      std::println("  Secant iteration failed to converge.");
+  }
 
   auto fin = std::chrono::high_resolution_clock::now();
   auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
@@ -869,135 +884,161 @@ void dscal_m(int n, double sa, std::vector<std::vector<double>>& abd, int col, i
     abd[start_row + (i * incx)][col] *= sa;
   }
 }
-//// --------------------------------------------------------------------
-////  FILE_NAME_INC - increment a partially numeric filename
-//// --------------------------------------------------------------------
-//def file_name_inc(file_name):
-//  if not file_name:
-//    std::println();
-//    std::println("FILE_NAME_INC - Fatal error!");
-//    std::println("  The input string is empty.");
-//    std::exit(1)
-//
-//  name_list = list(file_name)
-//  change = 0
-//
-//  for i in range(len(name_list) - 1, -1, -1):
-//    c = name_list[i]
-//    if "0" <= c <= "9":
-//      change += 1
-//      digit = ord(c) - 48
-//      digit += 1
-//      if digit == 10:
-//        digit = 0
-//      c = chr(digit + 48)
-//      name_list[i] = c
-//      if c != "0":
-//        return "".join(name_list)
-//
-//  if change == 0:
-//    return ""
-//
-//  return "".join(name_list)
-  //
-//
-//// --------------------------------------------------------------------
-////  GET_UNIT - return a free FORTRAN unit number (mocked for Python)
-//// --------------------------------------------------------------------
-//_next_unit = 10
-  //
-//
-//def get_unit():
-//  global _next_unit
-//  _next_unit += 1
-//  return _next_unit
-  //
-//
-//// --------------------------------------------------------------------
-////  GETG - extract values of a quantity along the profile line
-//// --------------------------------------------------------------------
-//def getg(f, iline, my, neqn):
-//  u = np.zeros(my, dtype=np.float64)
-//  for i in range(my):
-//    j = iline[i]
-//    if j < 0:  // 0-indexed: j <= 0 means j == -1 (Fortran: j <= 0)
-//      u[i] = 0.0
-//    } else if j == 0:
-//      u[i] = 0.0
-//    else:
-//      u[i] = f[j - 1]  // Convert 1-based index from iline to 0-based
-//  return u
-  //
-//
-//// --------------------------------------------------------------------
-////  GRAM - compute the Gram matrix and R vector
-//// --------------------------------------------------------------------
-//def gram(
-//  gr, iline, indx, iwrite, my, nelemn, nnodes, node, n_points, r, uprof, xc, xprof, yc
-//):
-//  wt = np.array([5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0], dtype=np.float64)
-//  yq_gauss = np.array([-0.7745966692, 0.0, 0.7745966692], dtype=np.float64)
-//
-//  r[:] = 0.0
-//  gr[:, :] = 0.0
-//
-//  for it in range(nelemn):
-//    k = node[it, 0]
-//    kk = node[it, 1]
-//
-//    if abs(xc[k] - xprof) > 1.0e-4 or abs(xc[kk] - xprof) > 1.0e-4:
-//      continue
-//
-//    for iquad in range(3):
-//      bma2 = (yc[kk] - yc[k]) / 2.0
-//      ar = bma2 * wt[iquad]
-//      x = xprof
-//      y = yc[k] + bma2 * (yq_gauss[iquad] + 1.0)
-//
-//      uiqdpt = 0.0
-//      for iq in range(nnodes):
-//        if iq in (0, 1, 3):
-//          bb, bx, by = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc)
-//          ip = node[it, iq]
-//          iun = indx[ip, 0]
-//          if 0 < iun:
-//            ii = igetl(iun, iline, my)
-//            uiqdpt += bb * uprof[ii - 1]
-//          } else if iun == -1:
-//            ubc = ubdry(1, yc[ip])
-//            uiqdpt += bb * ubc
-//
-//      for iq in range(nnodes):
-//        if iq in (0, 1, 3):
-//          ip = node[it, iq]
-//          bb, bx, by = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc)
-//          i_val = indx[ip, 0]
-//          if 0 < i_val:
-//            ii = igetl(i_val, iline, my)
-//            r[ii - 1] += bb * uiqdpt * ar
-//            for iqq in range(nnodes):
-//              if iqq in (0, 1, 3):
-//                ipp = node[it, iqq]
-//                bbb, bbx_, bby_ = qbf(
-//                  x, y, it, iqq, nelemn, nnodes, node, n_points, xc, yc
-//                )
-//                j_val = indx[ipp, 0]
-//                if j_val != 0:
-//                  jj = igetl(j_val, iline, my)
-//                  gr[ii - 1, jj - 1] += bb * bbb * ar
-//
-//  if 3 <= iwrite:
-//    std::println();;
-//    std::println("Gram matrix:");;
-//    std::println();
-//    for i in range(my):
-//      for j in range(my):
-//        std::println(i + 1, j + 1, gr[i, j])
-//    std::println();
-//    std::println("R vector:");
-//    std::println();
-//    for i in range(my):
-//      std::println(r[i])
+//* --------------------------------------------------------------------
+//*  FILE_NAME_INC - increment a partially numeric filename
+//* --------------------------------------------------------------------
+std::string file_name_inc(std::string file_name) {
+  if (file_name.empty()) {
+    std::println("\nFILE_NAME_INC - Fatal error!");
+    std::println("The input string is empty.");
+    std::exit(1);
+  }
+
+  int change = 0;
+  // Recorremos el string desde el final hacia el inicio
+  for (int i = file_name.length() - 1; i >= 0; --i) {
+    if (file_name[i] >= '0' && file_name[i] <= '9') {
+      change++;
+      int digit = file_name[i] - '0';
+      digit++;
+      
+      if (digit == 10) {
+        digit = 0;
+        file_name[i] = '0';
+      } else {
+        file_name[i] = static_cast<char>(digit + '0');
+        return file_name; // Retorno temprano si no hay acarreo
+      }
+  }
+  }
+
+  return (change == 0) ? "" : file_name;
+}
+
+//* --------------------------------------------------------------------
+//*  GETG - extract values of a quantity along the profile line
+//* --------------------------------------------------------------------
+std::vector<double> getg(
+  std::vector<double> &f, std::vector<int> &iline, int my, int neqn
+) {
+  std::vector<double> u(my, 0.0);
+  int j;
+  for (int i = 0; i < my; i++) {
+    j = iline[i];
+    if (j < 0)  // 0-indexed: j <= 0 means j == -1 (Fortran: j <= 0)
+      u[i] = 0.0;
+    else if (j == 0) u[i] = 0.0;
+    else u[i] = f[j - 1];  // Convert 1-based index from iline to 0-based
+  }
+  return u;
+}
+
+//* --------------------------------------------------------------------
+//*  GRAM - compute the Gram matrix and R vector
+//* --------------------------------------------------------------------
+void gram(
+  std::vector<std::vector<double>> &gr, 
+  std::vector<int> &iline, 
+  std::vector<std::vector<int>> &indx, 
+  int iwrite, int my, int nelemn, 
+  int nnodes, std::vector<std::vector<int>> &node, 
+  int n_points, std::vector<double> r, 
+  std::vector<double> uprof, 
+  std::vector<double> xc, double xprof, 
+  std::vector<double> yc
+) {
+  std::vector<double> wt = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
+  //wt = np.array([5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0], dtype=np.float64)
+  std::vector<double> yq_gauss = {-0.7745966692, 0.0, 0.7745966692};
+  //yq_gauss = np.array([-0.7745966692, 0.0, 0.7745966692], dtype=np.float64)
+
+  for (int it = 0; it < r.size(); it++) {
+    r[it] = 0.0;
+  }
+
+  for (int it = 0; it < gr.size(); it++) {
+    for (int j = 0; j < gr[it].size(); j++) {
+      gr[it][j] = 0.0;
+    }
+  }
+  int k, kk, ip, iun, i_val, ipp;
+  int jj, j_val, ii;
+  double bma2, ar, x, y, uiqdpt, bb, bx, by, ubc;
+  double bbb, bbx_, bby_;
+  std::vector<int> three_iter = {0, 1, 3};
+
+  for (int it = 0; it < nelemn; it++) {
+    k = node[it][0];
+    kk = node[it][1];
+
+    if ((std::abs(xc[k] - xprof) > 1.0e-4) or (std::abs(xc[kk] - xprof) > 1.0e-4))
+      continue;
+
+    for (int iquad = 0; iquad < 3; iquad++) {
+      bma2 = (yc[kk] - yc[k]) / 2.0;
+      ar = bma2 * wt[iquad];
+      x = xprof;
+      y = yc[k] + bma2 * (yq_gauss[iquad] + 1.0);
+
+      uiqdpt = 0.0;
+      for (int iq = 0; iq < nnodes; iq++) {
+        if ((iq == 0) or (iq == 1) or (iq == 3)) {
+          std::tie(bb, bx, by) = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+          ip = node[it][iq];
+          iun = indx[ip][0];
+          if (0 < iun) {
+            ii = igetl(iun, iline, my);
+            uiqdpt += bb * uprof[ii - 1];
+          } else if (iun == -1) {
+            ubc = ubdry(1, yc[ip]);
+            uiqdpt += bb * ubc;
+          }
+        }
+      }
+
+      for (int iq = 0; iq < nnodes; iq++) {
+        if ((iq == 0) or (iq == 1) or (iq == 3)) {
+          ip = node[it][iq];
+          std::tie(bb, bx, by) = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+          i_val = indx[ip][0];
+          if (0 < i_val) {
+            ii = igetl(i_val, iline, my);
+            r[ii - 1] += bb * uiqdpt * ar;
+            for (int iqq = 0; iqq < nnodes; iqq++) {
+              if (iqq == 0 or iqq == 1 or iqq == 3) {
+                ipp = node[it][iqq];
+                std::tie(bbb, bbx_, bby_) = qbf(
+                  x, y, it, iqq, nelemn, nnodes, node, n_points, xc, yc
+                );
+                j_val = indx[ipp][0];
+                if (j_val != 0) {
+                  jj = igetl(j_val, iline, my);
+                  gr[ii - 1][jj - 1] += bb * bbb * ar;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (3 <= iwrite) {
+    std::println();
+    std::println("Gram matrix:");
+    std::println();
+    for (int i = 0; i < my; i++) {
+      for (int j = 0; j < my; j++) {
+        std::println("{} {} {}", i + 1, j + 1, gr[i][j]);
+      }
+    }
+    std::println();
+    std::println("R vector:");
+    std::println();
+    for (int i = 0; i < my; i++) {
+      std::println("{}", r[i]);
+    }
+  }
+}
 
 //* --------------------------------------------------------------------
 //*  I4_MODP - nonnegative remainder of integer division
@@ -1083,14 +1124,15 @@ int idamax_m(int n, const std::vector<std::vector<double>>& abd, int col, int st
   return idamax_val;
 }
 
-//// --------------------------------------------------------------------
-////  IGETL - get the local unknown number along the profile line
-//// --------------------------------------------------------------------
-//def igetl(i, iline, my):
-//  for j in range(my):
-//    if iline[j] == i:
-//      return j + 1  // 1-indexed
-//  return -1
+//* --------------------------------------------------------------------
+//*  IGETL - get the local unknown number along the profile line
+//* --------------------------------------------------------------------
+inline int igetl(int i, std::vector<int> &iline, int my) {
+  for (int j = 0; j < my; j++) {
+    if (iline[j] == i) return j + 1; // 1-indexed
+  }
+  return -1;
+}
 
 //* --------------------------------------------------------------------
 //*  LINSYS - solve the linearized Navier Stokes equation
@@ -1586,269 +1628,253 @@ std::tuple<double, double, double> refqbf(
   return std::tuple {bb, bx, by};
 }
 
-//// --------------------------------------------------------------------
-////  RESID - compute the residual
-//// --------------------------------------------------------------------
-//def resid(
-//  area,
-//  g,
-//  indx,
-//  insc,
-//  isotri,
-//  iwrite,
-//  nelemn,
-//  neqn,
-//  nnodes,
-//  node,
-//  n_points,
-//  nquad,
-//  phi,
-//  psi,
-//  res,
-//  reynld,
-//  xc,
-//  xm,
-//  yc,
-//  ym,
-//):
-//  itype = -1
-//  visc = 1.0 / reynld
-//
-//  res[:neqn] = 0.0
-//  ubc = 0.0
-//
-//  un = np.zeros(2, dtype=np.float64)
-//  unx = np.zeros(2, dtype=np.float64)
-//  uny = np.zeros(2, dtype=np.float64)
-//
-//  for it in range(nelemn):
-//    ar = area[it] / 3.0
-//
-//    for iquad in range(nquad):
-//      yq = ym[it, iquad]
-//      xq = xm[it, iquad]
-//
-//      det = 0.0
-//      etax = 0.0
-//      etay = 0.0
-//      xix = 0.0
-//      xiy = 0.0
-//
-//      if isotri[it] == 1:
-//        det, etax, etay, xix, xiy = trans(
-//          it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
-//        )
-//        ar = det * area[it] / 3.0
-//
-//      uval_out = uval(
-//        etax,
-//        etay,
-//        g,
-//        indx,
-//        isotri,
-//        it,
-//        nelemn,
-//        neqn,
-//        nnodes,
-//        node,
-//        n_points,
-//        xc,
-//        xix,
-//        xiy,
-//        xq,
-//        yc,
-//        yq,
-//      )
-//      un[:], unx[:], uny[:] = uval_out
-//
-//      for iq in range(nnodes):
-//        ip = node[it, iq]
-//        bb = phi[it, iquad, iq, 0]
-//        bx = phi[it, iquad, iq, 1]
-//        by = phi[it, iquad, iq, 2]
-//        bbl = psi[it, iquad, iq]
-//        iprs = insc[ip]
-//        ihor = indx[ip, 0]
-//        iver = indx[ip, 1]
-//
-//        if 0 < ihor:
-//          res[ihor - 1] -= ar * bb * (un[0] * unx[0] + un[1] * uny[0])
-//
-//        if 0 < iver:
-//          res[iver - 1] -= ar * bb * (un[0] * unx[1] + un[1] * uny[1])
-//
-//        for iqq in range(nnodes):
-//          ipp = node[it, iqq]
-//          bbb = phi[it, iquad, iqq, 0]
-//          bbx = phi[it, iquad, iqq, 1]
-//          bby = phi[it, iquad, iqq, 2]
-//          bbbl = psi[it, iquad, iqq]
-//          ju = indx[ipp, 0]
-//          jv = indx[ipp, 1]
-//          jp = insc[ipp]
-//
-//          if 0 < ju:
-//            if 0 < ihor:
-//              res[ihor - 1] += (
-//                ar
-//                * (
-//                  visc * (by * bby + bx * bbx)
-//                  + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1])
-//                )
-//                * g[ju - 1]
-//              )
-//
-//            if 0 < iver:
-//              res[iver - 1] += ar * bb * bbb * unx[1] * g[ju - 1]
-//
-//            if 0 < iprs:
-//              res[iprs - 1] += ar * bbx * bbl * g[ju - 1]
-//
-//          } else if ju == itype:
-//            if ju == -2:
-//              ubc = ubump(
-//                g,
-//                indx,
-//                ipp,
-//                iqq,
-//                isotri,
-//                it,
-//                1,
-//                nelemn,
-//                neqn,
-//                nnodes,
-//                node,
-//                n_points,
-//                xc,
-//                yc,
-//              )
-//            } else if ju == -1:
-//              ubc = ubdry(1, yc[ipp])
-//
-//            if 0 < ihor:
-//              aij = ar * (
-//                visc * (by * bby + bx * bbx)
-//                + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1])
-//              )
-//              res[ihor - 1] += ubc * aij
-//
-//            if 0 < iver:
-//              aij = ar * bb * bbb * unx[1]
-//              res[iver - 1] += ubc * aij
-//
-//            if 0 < iprs:
-//              aij = ar * bbx * bbl
-//              res[iprs - 1] += ubc * aij
-//
-//          if 0 < jv:
-//            if 0 < ihor:
-//              res[ihor - 1] += ar * bb * bbb * uny[0] * g[jv - 1]
-//
-//            if 0 < iver:
-//              res[iver - 1] += (
-//                ar
-//                * (
-//                  visc * (by * bby + bx * bbx)
-//                  + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0])
-//                )
-//                * g[jv - 1]
-//              )
-//
-//            if 0 < iprs:
-//              res[iprs - 1] += ar * bby * bbl * g[jv - 1]
-//
-//          } else if jv == itype:
-//            if jv == -2:
-//              ubc = ubump(
-//                g,
-//                indx,
-//                ipp,
-//                iqq,
-//                isotri,
-//                it,
-//                2,
-//                nelemn,
-//                neqn,
-//                nnodes,
-//                node,
-//                n_points,
-//                xc,
-//                yc,
-//              )
-//            } else if jv == -1:
-//              ubc = ubdry(2, yc[ipp])
-//
-//            if 0 < ihor:
-//              aij = ar * bb * bbb * uny[0]
-//              res[ihor - 1] += ubc * aij
-//
-//            if 0 < iver:
-//              aij = ar * (
-//                visc * (by * bby + bx * bbx)
-//                + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0])
-//              )
-//              res[iver - 1] += ubc * aij
-//
-//            if 0 < iprs:
-//              aij = ar * bby * bbl
-//              res[iprs - 1] += ubc * aij
-//
-//          if 0 < jp:
-//            if 0 < ihor:
-//              res[ihor - 1] -= ar * bx * bbbl * g[jp - 1]
-//
-//            if 0 < iver:
-//              res[iver - 1] -= ar * by * bbbl * g[jp - 1]
-//
-//  res[neqn - 1] = g[neqn - 1]
-//
-//  rmax = 0.0
-//  imax = 0
-//  ibad = 0
-//
-//  for i in range(neqn):
-//    test = abs(res[i])
-//    if rmax < test:
-//      rmax = test
-//      imax = i
-//    if 1.0e-3 < test:
-//      ibad += 1
-//
-//  if 1 <= iwrite:
-//    std::println();
-//    std::println("RESIDUAL INFORMATION:");
-//    std::println();
-//    std::println(f"Worst residual is number {imax + 1}");
-//    std::println(f"of magnitude {rmax}");
-//    std::println();
-//    std::println(f"Number of \"bad\" residuals is {ibad} out of {neqn}");
-//    std::println();
-//
-//  if 2 <= iwrite:
-//    std::println("Raw residuals:");
-//    std::println();
-//    idx = 0
-//    for j in range(n_points):
-//      if 0 < indx[j, 0]:
-//        if abs(res[idx]) <= 1.0e-3:
-//          std::println(f" U {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        else:
-//          std::println(f"*U {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        idx += 1
-//
-//      if 0 < indx[j, 1]:
-//        if abs(res[idx]) <= 1.0e-3:
-//          std::println(f" V {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        else:
-//          std::println(f"*V {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        idx += 1
-//
-//      if 0 < insc[j]:
-//        if abs(res[idx]) <= 1.0e-3:
-//          std::println(f" P {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        else:
-//          std::println(f"*P {idx + 1} {j + 1} {res[idx]:14.6e}");
-//        idx += 1
+//* --------------------------------------------------------------------
+//*  RESID - compute the residual
+//* --------------------------------------------------------------------
+void resid(
+  std::vector<double> &area, std::vector<double> &g,
+  std::vector<std::vector<int>> &indx,
+  std::vector<int> &insc, std::vector<int> &isotri,
+  int iwrite, int nelemn, int neqn,
+  int nnodes, std::vector<std::vector<int>> &node,
+  int n_points, int nquad,
+  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
+  std::vector<std::vector<std::vector<double>>> &psi, 
+  std::vector<double> &res, double reynld, 
+  std::vector<double> &xc, std::vector<std::vector<double>> &xm, 
+  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+) {
+  int itype = -1;
+  double visc = 1.0 / reynld;
+
+  for (int it = 0; it < neqn; it++) {
+    res[it] = 0.0;
+  }
+
+  double ubc = 0.0;
+  double ar, yq, xq, det, etax, etay, xix, xiy, aij;
+  int ip, iprs, ihor, iver, ipp, ju, jv, jp;
+  double bb, bx, by, bbl, bbb, bbx, bby, bbbl;
+
+  std::vector<double> un(2, 0.0);
+  std::vector<double> unx(2, 0.0);
+  std::vector<double> uny(2, 0.0);
+
+  for (int it = 0; it < nelemn; it++) {
+    ar = area[it] / 3.0;
+
+    for (int iquad = 0; iquad < nquad; iquad++) {
+      yq = ym[it][iquad];
+      xq = xm[it][iquad];
+
+      det = 0.0;
+      etax = 0.0;
+      etay = 0.0;
+      xix = 0.0;
+      xiy = 0.0;
+
+      if (isotri[it] == 1) {
+        std::tie(det, etax, etay, xix, xiy) = trans(
+          it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+        );
+        ar = det * area[it] / 3.0;
+      }
+
+      std::tie(un, unx, uny) = uval(
+        etax, etay, g, indx, isotri, it,
+        nelemn, neqn, nnodes, node, n_points, xc,
+        xix, xiy, xq, yc, yq
+      );
+
+      for (int iq = 0; iq < nnodes; iq++) {
+        ip = node[it][iq];
+        bb = phi[it][iquad][iq][0];
+        bx = phi[it][iquad][iq][1];
+        by = phi[it][iquad][iq][2];
+        bbl = psi[it][iquad][iq];
+        iprs = insc[ip];
+        ihor = indx[ip][0];
+        iver = indx[ip][1];
+
+        if (0 < ihor)
+          res[ihor - 1] -= ar * bb * (un[0] * unx[0] + un[1] * uny[0]);
+
+        if (0 < iver)
+          res[iver - 1] -= ar * bb * (un[0] * unx[1] + un[1] * uny[1]);
+
+        for (int iqq = 0; iqq < nnodes; iqq++) {
+          ipp = node[it][iqq];
+          bbb = phi[it][iquad][iqq][0];
+          bbx = phi[it][iquad][iqq][1];
+          bby = phi[it][iquad][iqq][2];
+          bbbl = psi[it][iquad][iqq];
+          ju = indx[ipp][0];
+          jv = indx[ipp][1];
+          jp = insc[ipp];
+
+          if (0 < ju) {
+            if (0 < ihor) {
+              res[ihor - 1] += (
+                ar
+                * (
+                  visc * (by * bby + bx * bbx)
+                  + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1])
+                )
+                * g[ju - 1]
+              );
+            }
+
+            if (0 < iver)
+              res[iver - 1] += ar * bb * bbb * unx[1] * g[ju - 1];
+
+            if (0 < iprs)
+              res[iprs - 1] += ar * bbx * bbl * g[ju - 1];
+
+          } else if (ju == itype) {
+            if (ju == -2) {
+              ubc = ubump(
+                g, indx, ipp, iqq, isotri, it, 1,
+                nelemn, neqn, nnodes, node, n_points,
+                xc, yc
+              );
+            } else if (ju == -1)
+              ubc = ubdry(1, yc[ipp]);
+
+            if (0 < ihor) {
+              aij = ar * (
+                visc * (by * bby + bx * bbx)
+                + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1])
+              );
+              res[ihor - 1] += ubc * aij;
+            }
+
+            if (0 < iver) {
+              aij = ar * bb * bbb * unx[1];
+              res[iver - 1] += ubc * aij;
+            }
+
+            if (0 < iprs) {
+              aij = ar * bbx * bbl;
+              res[iprs - 1] += ubc * aij;
+            }
+          }
+          if (0 < jv) {
+            if (0 < ihor)
+              res[ihor - 1] += ar * bb * bbb * uny[0] * g[jv - 1];
+
+            if (0 < iver) {
+              res[iver - 1] += (
+                ar
+                * (
+                  visc * (by * bby + bx * bbx)
+                  + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0])
+                )
+                * g[jv - 1]
+              );
+            }
+
+            if (0 < iprs)
+              res[iprs - 1] += ar * bby * bbl * g[jv - 1];
+
+          } else if (jv == itype) {
+            if (jv == -2) {
+              ubc = ubump(
+                g, indx, ipp, iqq, isotri, it, 2,
+                nelemn, neqn, nnodes, node, n_points, 
+                xc, yc
+              );
+            } else if (jv == -1) ubc = ubdry(2, yc[ipp]);
+
+            if (0 < ihor) {
+              aij = ar * bb * bbb * uny[0];
+              res[ihor - 1] += ubc * aij;
+            }
+
+            if (0 < iver) {
+              aij = ar * (
+                visc * (by * bby + bx * bbx)
+                + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0])
+              );
+              res[iver - 1] += ubc * aij;
+            }
+
+            if (0 < iprs) {
+              aij = ar * bby * bbl;
+              res[iprs - 1] += ubc * aij;
+            }
+          }
+          if (0 < jp) {
+            if (0 < ihor)
+              res[ihor - 1] -= ar * bx * bbbl * g[jp - 1];
+
+            if (0 < iver)
+              res[iver - 1] -= ar * by * bbbl * g[jp - 1];
+          }
+        }
+      }
+    }
+  }
+
+  res[neqn - 1] = g[neqn - 1];
+
+  double rmax = 0.0;
+  double imax = 0;
+  double ibad = 0;
+  double test;
+
+  for (int i = 0; i < neqn; i++) {
+    test = std::abs(res[i]);
+    if (rmax < test) {
+      rmax = test;
+      imax = i;
+    }
+    if (1.0e-3 < test)
+      ibad += 1;
+  }
+
+  if (1 <= iwrite) {
+    std::println();
+    std::println("RESIDUAL INFORMATION:");
+    std::println();
+    std::println("Worst residual is number {}", imax+1);
+    std::println("of magnitude {}", rmax);
+    std::println();
+    std::println("Number of \"bad\" residuals is {} out of {}", ibad, neqn);
+    std::println();
+  }
+
+  if (2 <= iwrite) {
+    std::println("Raw residuals:");
+    std::println();
+    int idx = 0;
+    for (int j = 0; j < n_points; j++) {
+      if (0 < indx[j][0]) {
+        if (std::abs(res[idx]) <= 1.0e-3)
+          std::println(" U {} {} {}", idx+1, j+1, res[idx]);
+        else
+          std::println("*U {} {} {}", idx+1, j+1, res[idx]);
+        idx += 1;
+      }
+
+      if (0 < indx[j][1]) {
+        if (std::abs(res[idx]) <= 1.0e-3)
+          std::println(" V {} {} {}", idx+1, j+1, res[idx]);
+        else
+          std::println("*V {} {} {}", idx+1, j+1, res[idx]);
+        idx += 1;
+      }
+
+      if (0 < insc[j]) {
+        if (std::abs(res[idx]) <= 1.0e-3)
+          std::println(" P {} {} {}", idx+1, j+1, res[idx]);
+        else
+          std::println("*P {} {} {}", idx+1, j+1, res[idx]);
+        idx += 1;
+      }
+    }
+  }
+}
+
 
 //* --------------------------------------------------------------------
 //*  SETBAN - compute the half band width
@@ -2455,10 +2481,6 @@ double ubump(
       it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
     );
   }
-    
-  //un = np.zeros(2, dtype=np.float64);
-  //unx = np.zeros(2, dtype=np.float64);
-  //uny = np.zeros(2, dtype=np.float64);
 
   auto [un, unx, uny] = _ubump_uval(
     g, indx, isotri, it, nelemn, 
@@ -2466,7 +2488,6 @@ double ubump(
     xc, xix, xiy, xq, yc, yq, 
     det, etax, etay
   );
-  //un[:], unx[:], uny[:] = un_out, unx_out, uny_out
 
   if (iukk == 1)
     return -uny[0] * (xc[ip] - 1.0) * (xc[ip] - 3.0);
@@ -2477,10 +2498,6 @@ double ubump(
     std::exit(1);
   }
 }
-//def _ubump_uval(
-//  g, indx, isotri, it, nelemn, neqn, nnodes, node,
-//  n_points, xc, xix, xiy, xq, yc, yq, det, etax, etay
-//):
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump_uval(
   std::vector<double> &g,
   std::vector<std::vector<int>> &indx,
@@ -2578,33 +2595,52 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
   return std::tuple {un, unx, uny};
 }
 
-//// --------------------------------------------------------------------
-////  UV_WRITE - write a velocity file
-//// --------------------------------------------------------------------
-//def uv_write(f, indx, uv_file_obj, neqn, n_points, yc):
-//  for ip in range(n_points):
-//    k = indx[ip, 0]
-//    if k < 0:
-//      u = ubdry(1, yc[ip])
-//    } else if k == 0:
-//      u = 0.0
-//    else:
-//      u = f[k - 1]
-//
-//    k = indx[ip, 1]
-//    if k < 0:
-//      v = ubdry(2, yc[ip])
-//    } else if k == 0:
-//      v = 0.0
-//    else:
-//      v = f[k - 1]
-//
-//    uv_file_obj.write(f"  {u:14.6e}  {v:14.6e}\n");
-  //
-//
-//// --------------------------------------------------------------------
-////  XY_WRITE - write node coordinate data
-//// --------------------------------------------------------------------
-//def xy_write(xy_file_obj, n_points, xc, yc):
-//  for ip in range(n_points):
-//    xy_file_obj.write(f"  {xc[ip]:14.6e}  {yc[ip]:14.6e}\n");
+//* --------------------------------------------------------------------
+//*  UV_WRITE - write a velocity file
+//* --------------------------------------------------------------------
+void uv_write(
+  const std::vector<double>& f, 
+  const std::vector<std::vector<int>>& indx, 
+  std::ofstream& uv_file_obj, 
+  int neqn, int n_points, 
+  const std::vector<double>& yc
+) {
+  
+  uv_file_obj << std::scientific << std::setprecision(6);
+  double u, v;
+
+  for (int ip = 0; ip < n_points; ++ip) {
+    // Lógica para 'u'
+    int k_u = indx[ip][0];
+
+    if (k_u < 0) u = ubdry(1, yc[ip]);
+    else if (k_u == 0) u = 0.0;
+    else u = f[k_u - 1];
+
+    // Lógica para 'v'
+    int k_v = indx[ip][1];
+
+    if (k_v < 0) v = ubdry(2, yc[ip]);
+    else if (k_v == 0) v = 0.0;
+    else v = f[k_v - 1];
+
+    uv_file_obj << "  " << std::setw(14) << u 
+                << "  " << std::setw(14) << v << "\n";
+  }
+}
+
+//* --------------------------------------------------------------------
+//*  XY_WRITE - write node coordinate data
+//* --------------------------------------------------------------------
+void xy_write(
+  std::ofstream& xy_file_obj, int n_points, 
+  std::vector<double>& xc, std::vector<double>& yc
+) {
+  xy_file_obj << std::scientific << std::setprecision(6);
+  
+  for (int ip = 0; ip < n_points; ++ip) {
+    // El formato :14.6e en Python se traduce así:
+    xy_file_obj << "  " << std::setw(14) << xc[ip] 
+                << "  " << std::setw(14) << yc[ip] << "\n";
+  }
+}
