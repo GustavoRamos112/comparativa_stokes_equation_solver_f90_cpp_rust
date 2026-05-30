@@ -235,7 +235,7 @@ void uv_write(
   int neqn, int n_points, 
   const std::vector<double>& yc
 );
-std::vector<double> linsys(
+void linsys(
   std::vector<std::vector<double>> &a, 
   std::vector<double> &area,
   std::vector<double> &f, std::vector<double> &g,
@@ -267,15 +267,15 @@ int main(void)
   constexpr int nnodes = 6;
   constexpr int nquad = 3;
 
-  std::vector<std::vector<double>> a(maxrow, std::vector<double>(maxeqn, 0.0));
+  std::vector<std::vector<double>> a;
   double anew = 0.0;
   double anext = 0.3;
   double aold = 0.0;
   double aprof = 0.25;
   std::vector<double> area(nelemn, 0.0);
   std::vector<double> dcda(my, 0.0);
-  std::vector<double> f(maxeqn, 0.0);
-  std::vector<double> g(maxeqn, 0.0);
+  std::vector<double> f;
+  std::vector<double> g;
   std::vector<std::vector<double>> gr(my, std::vector<double>(my, 0.0));
   std::vector<int> iline(my, 0);
   std::vector<std::vector<int>> indx(n_points, std::vector<int>(2, 0));
@@ -305,11 +305,11 @@ int main(void)
     )
   );
   std::vector<double> r(my, 0.0);
-  std::vector<double> res(maxeqn, 0.0);
+  std::vector<double> res;
   double reynld = 1.0;
   double rjpnew = 0.0;
   double rjpold = 0.0;
-  std::vector<double> sens(maxeqn, 0.0);
+  std::vector<double> sens;
   double tolnew = 0.0001;
   double tolsec = 0.0001;
   std::vector<double> uprof(my, 0.0);
@@ -365,6 +365,12 @@ int main(void)
     ny, xbleft, xbrite, xlngth
   );
 
+  f.resize(neqn, 0.0);
+  g.resize(neqn, 0.0);
+  res.resize(neqn, 0.0);
+  sens.resize(neqn, 0.0);
+
+
   ypert = aprof;
   setxy(iwrite, _long, mx, my, n_points, nx, ny, xc, xlngth, yc, ylngth, ypert);
 
@@ -377,6 +383,8 @@ int main(void)
   std::tie(nband, nlband, nrow) = setban(
     indx, insc, maxrow, nband, nelemn, nlband, nnodes, node, n_points, nrow
   );
+
+  a.resize(nrow, std::vector<double>(neqn, 0.0));
 
   numnew = nstoke(
     a, area, f, g, indx, insc, isotri,
@@ -473,7 +481,7 @@ int main(void)
 
     itype = -2;
 
-    sens = linsys(
+    linsys(
       a, area, sens, g, indx, insc, isotri, itype, maxrow,
       nband, nelemn, neqn, nlband, nnodes, node,
       n_points, nquad, nrow, phi, psi,
@@ -795,7 +803,7 @@ std::tuple<int, std::vector<int>> dgbfa(
 //* --------------------------------------------------------------------
 //*  DGBSL - solve a real banded system factored by DGBFA
 //* --------------------------------------------------------------------
-std::vector<double> dgbsl(
+void dgbsl(
   std::vector<std::vector<double>> &abd, int lda,
   int n, int ml, int mu,
   std::vector<int> &ipvt, 
@@ -849,8 +857,6 @@ std::vector<double> dgbsl(
       }
     }
   }
-
-  return b;
 }
 
 //* --------------------------------------------------------------------
@@ -1136,7 +1142,7 @@ inline int igetl(int i, std::vector<int> &iline, int my) {
 //* --------------------------------------------------------------------
 //*  LINSYS - solve the linearized Navier Stokes equation
 //* --------------------------------------------------------------------
-std::vector<double> linsys(
+void linsys(
   std::vector<std::vector<double>> &a, 
   std::vector<double> &area,
   std::vector<double> &f, std::vector<double> &g,
@@ -1177,10 +1183,6 @@ std::vector<double> linsys(
   double ar, yq, xq, bbl, bbbl, ubc, aij;
   double bb, bx, by;
 
-  std::tuple<
-    std::vector<double>, std::vector<double>, std::vector<double>
-  > uval_out;
-
   for (int it = 0; it < nelemn; it++) {
     ar = area[it] / 3.0;
 
@@ -1202,28 +1204,11 @@ std::vector<double> linsys(
         ar = det * area[it] / 3.0;
       }
 
-      uval_out = uval(
-        etax,
-        etay,
-        g,
-        indx,
-        isotri,
-        it,
-        nelemn,
-        neqn,
-        nnodes,
-        node,
-        n_points,
-        xc,
-        xix,
-        xiy,
-        xq,
-        yc,
-        yq
+      std::tie(un, unx, uny) = uval(
+        etax, etay, g, indx, isotri, it, nelemn,
+        neqn, nnodes, node, n_points, xc, xix,
+        xiy, xq, yc, yq
       );
-      std::tie(un, unx, uny) = uval_out;
-
-      //un[:], unx[:], uny[:] = uval_out
 
       for (int iq = 0; iq < nnodes; iq++) {
         ip = node[it][iq];
@@ -1406,9 +1391,7 @@ std::vector<double> linsys(
   }
 
   int job = 0;
-  f = dgbsl(a, maxrow, neqn, nlband, nlband, ipvt, f, job);
-
-  return f;
+  dgbsl(a, maxrow, neqn, nlband, nlband, ipvt, f, job);
 }
 
 
@@ -1438,7 +1421,7 @@ int nstoke(
     numnew++;
 
     itype = -1;
-    f = linsys(
+    linsys(
       a, area,
       f, g,
       indx,
