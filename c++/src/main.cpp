@@ -17,8 +17,12 @@
 #include <cstdlib>
 #include <cmath>
 
+#include <array>
+
 #include <filesystem>
 namespace fs = std::filesystem;
+
+const bool save_times = true;
 
 //* -------------------------------------------------------------------
 //* Declaracion de funciones
@@ -60,16 +64,16 @@ void setbas(
 );
 std::tuple<double, double, double, double, double> trans(
   int it, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, 
+  const std::vector<std::vector<int>> &node, 
   int n_points, 
-  std::vector<double> &xc, double xq, 
-  std::vector<double> &yc, double yq
+  const std::vector<double> &xc, double xq, 
+  const std::vector<double> &yc, double yq
 );
 double bsp(
   int it, int iq, int id, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, 
-  std::vector<double> &xc, double xq, 
-  std::vector<double> &yc, double yq
+  const std::vector<std::vector<int>> &node, int n_points, 
+  const std::vector<double> &xc, double xq, 
+  const std::vector<double> &yc, double yq
 );
 inline int i4_modp(int i, int j);
 inline int i4_wrap(int ival, int ilo, int ihi);
@@ -84,8 +88,8 @@ std::tuple<double, double, double> refqbf(
 std::tuple<double, double, double> qbf(
   double xq, double yq, int it, 
   int inn, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, 
-  std::vector<double> &xc, std::vector<double> &yc
+  const std::vector<std::vector<int>> &node, int n_points, 
+  const std::vector<double> &xc, const std::vector<double> &yc
 );
 void setlin(
   std::vector<int> &iline, 
@@ -149,41 +153,41 @@ void daxpy(
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
   double etax,
   double etay,
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &isotri,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
+  const std::vector<int> &isotri,
   int it,
   int nelemn,
   int neqn,
   int nnodes,
-  std::vector<std::vector<int>> &node,
+  const std::vector<std::vector<int>> &node,
   int n_points,
-  std::vector<double> &xc,
+  const std::vector<double> &xc,
   double xix,
   double xiy,
   double xq,
-  std::vector<double> &yc,
+  const std::vector<double> &yc,
   double yq
 );
 double ubump(
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
   int ip, int iqq,
-  std::vector<int> &isotri,
+  const std::vector<int> &isotri,
   int it, int iukk, int nelemn,
   int neqn, int nnodes,
-  std::vector<std::vector<int>> &node, int n_points,
-  std::vector<double> &xc, std::vector<double> &yc
+  const std::vector<std::vector<int>> &node, int n_points,
+  const std::vector<double> &xc, const std::vector<double> &yc
 );
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump_uval(
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &isotri,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
+  const std::vector<int> &isotri,
   int it, int nelemn, int neqn, int nnodes,
-  std::vector<std::vector<int>> &node,
-  int n_points, std::vector<double> &xc,
+  const std::vector<std::vector<int>> &node,
+  int n_points, const std::vector<double> &xc,
   double xix, double xiy, double xq,
-  std::vector<double> &yc,
+  const std::vector<double> &yc,
   double yq, double det, double etax, double etay
 );
 double ddot(
@@ -206,7 +210,7 @@ void resid(
   std::vector<double> &yc, std::vector<std::vector<double>> &ym
 );
 std::vector<double> getg(
-  std::vector<double> &f, std::vector<int> &iline, int my, int neqn
+  const std::vector<double> &f, const std::vector<int> &iline, int my, int neqn
 );
 void gram(
   std::vector<std::vector<double>> &gr, 
@@ -250,24 +254,24 @@ std::vector<double> linsys(
 
 int main(void)
 {
-  int maxnew = 4;
-  int maxsec = 10;
-  int nx = 21;
-  int ny = 7;
-  int maxrow = 27 * ny;
-  int nelemn = 2 * (nx - 1) * (ny - 1);
-  int mx = 2 * nx - 1;
-  int my = 2 * ny - 1;
-  int maxeqn = 2 * mx * my + nx * ny;
-  int n_points = mx * my;
-  int nnodes = 6;
-  int nquad = 3;
+  constexpr int maxnew = 4;
+  constexpr int maxsec = 10;
+  constexpr int nx = 21;
+  constexpr int ny = 7;
+  constexpr int maxrow = 27 * ny;
+  constexpr int nelemn = 2 * (nx - 1) * (ny - 1);
+  constexpr int mx = 2 * nx - 1;
+  constexpr int my = 2 * ny - 1;
+  constexpr int maxeqn = 2 * mx * my + nx * ny;
+  constexpr int n_points = mx * my;
+  constexpr int nnodes = 6;
+  constexpr int nquad = 3;
 
   std::vector<std::vector<double>> a(maxrow, std::vector<double>(maxeqn, 0.0));
-  float anew = 0.0;
-  float anext = 0.3;
-  float aold = 0.0;
-  float aprof = 0.25;
+  double anew = 0.0;
+  double anext = 0.3;
+  double aold = 0.0;
+  double aprof = 0.25;
   std::vector<double> area(nelemn, 0.0);
   std::vector<double> dcda(my, 0.0);
   std::vector<double> f(maxeqn, 0.0);
@@ -277,7 +281,7 @@ int main(void)
   std::vector<std::vector<int>> indx(n_points, std::vector<int>(2, 0));
   std::vector<int> insc(n_points, 0);
   std::vector<int> isotri(nelemn, 0);
-  int iwrite = 10;
+  int iwrite = 0;
   bool _long = false;
   int nband = 0;
   int neqn = 0;
@@ -326,8 +330,7 @@ int main(void)
   int itype;
   double temp, denom, test;
 
-  auto inicio = std::chrono::high_resolution_clock::now();
-
+  
   if (!fs::exists(uv_dir)) {
     fs::create_directories(uv_dir);
   }
@@ -335,12 +338,13 @@ int main(void)
   if (!fs::exists(xy_dir)) {
     fs::create_directories(xy_dir);
   }
-
+  
+  auto inicio = std::chrono::high_resolution_clock::now();
   timestamp();
   std::println();
-  std::println("BUMP");;
-  std::println("  C++ version");;
-  std::println("  Control problem for channel flow over a bump.");;
+  std::println("BUMP");
+  std::println("  C++ version");
+  std::println("  Control problem for channel flow over a bump.");
   std::println();
   std::println("  The bump will be generated with a height of {}", aprof);
   std::println();
@@ -373,10 +377,6 @@ int main(void)
   std::tie(nband, nlband, nrow) = setban(
     indx, insc, maxrow, nband, nelemn, nlband, nnodes, node, n_points, nrow
   );
-
-  for (int i = 0; i < neqn; i++) {
-    g[i] = 0.0;
-  }
 
   numnew = nstoke(
     a, area, f, g, indx, insc, isotri,
@@ -552,16 +552,22 @@ int main(void)
   auto fin = std::chrono::high_resolution_clock::now();
   auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
 
+  
   std::println();
   std::println("  Total execution time = {} ms.", duracion.count());
   std::println("  Number of secant steps = {}", numsec);
   std::println("  Number of Newton steps = {}", numnew);
   std::println();
-  std::println("BUMP:");;
-  std::println("  Normal end of execution.");;
+  std::println("BUMP:");
+  std::println("  Normal end of execution.");
   std::println();
   timestamp();
-
+  
+  if (save_times) {
+    std::ofstream archivo("times.txt", std::ios_base::app);
+    archivo << duracion.count() << std::endl;
+    archivo.close();
+  }
   return 0;
 }
 
@@ -570,9 +576,9 @@ int main(void)
 //* --------------------------------------------------------------------
 double bsp(
   int it, int iq, int id, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, 
-  std::vector<double> &xc, double xq, 
-  std::vector<double> &yc, double yq
+  const std::vector<std::vector<int>> &node, int n_points, 
+  const std::vector<double> &xc, double xq, 
+  const std::vector<double> &yc, double yq
 ) {
   int l1 = iq;
   int l2 = i4_wrap(iq + 1, 0, 2);  // 0-indexed: 1->2, 2->0, 3->1
@@ -797,7 +803,7 @@ std::vector<double> dgbsl(
 ) {
   int m = mu + ml + 1;
   double t;
-  int ln, l, lm, la, lb;
+  int l, lm, la, lb;
 
   if (job == 0) {
     if (0 < ml) {
@@ -920,7 +926,7 @@ std::string file_name_inc(std::string file_name) {
 //*  GETG - extract values of a quantity along the profile line
 //* --------------------------------------------------------------------
 std::vector<double> getg(
-  std::vector<double> &f, std::vector<int> &iline, int my, int neqn
+  const std::vector<double> &f, const std::vector<int> &iline, int my, int neqn
 ) {
   std::vector<double> u(my, 0.0);
   int j;
@@ -948,50 +954,42 @@ void gram(
   std::vector<double> &xc, double xprof, 
   std::vector<double> &yc
 ) {
-  std::vector<double> wt = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
-  //wt = np.array([5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0], dtype=np.float64)
-  std::vector<double> yq_gauss = {-0.7745966692, 0.0, 0.7745966692};
-  //yq_gauss = np.array([-0.7745966692, 0.0, 0.7745966692], dtype=np.float64)
+  constexpr std::array<double, 3> wt = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
+  constexpr std::array<double, 3> yq_gauss = {-0.7745966692, 0.0, 0.7745966692};
 
-  for (int it = 0; it < r.size(); it++) {
+  for (int it = 0; it < static_cast<int>(r.size()); it++) {
     r[it] = 0.0;
   }
 
-  for (int it = 0; it < gr.size(); it++) {
-    for (int j = 0; j < gr[it].size(); j++) {
+  for (int it = 0; it < static_cast<int>(gr.size()); it++) {
+    for (int j = 0; j < static_cast<int>(gr[it].size()); j++) {
       gr[it][j] = 0.0;
     }
   }
-  int k, kk, ip, iun, i_val, ipp;
-  int jj, j_val, ii;
-  double bma2, ar, x, y, uiqdpt, bb, bx, by, ubc;
-  double bbb, bbx_, bby_;
-  std::vector<int> three_iter = {0, 1, 3};
-
   for (int it = 0; it < nelemn; it++) {
-    k = node[it][0];
-    kk = node[it][1];
+    int k = node[it][0];
+    int kk = node[it][1];
 
     if ((std::abs(xc[k] - xprof) > 1.0e-4) or (std::abs(xc[kk] - xprof) > 1.0e-4))
       continue;
 
     for (int iquad = 0; iquad < 3; iquad++) {
-      bma2 = (yc[kk] - yc[k]) / 2.0;
-      ar = bma2 * wt[iquad];
-      x = xprof;
-      y = yc[k] + bma2 * (yq_gauss[iquad] + 1.0);
+      double bma2 = (yc[kk] - yc[k]) / 2.0;
+      double ar = bma2 * wt[iquad];
+      double x = xprof;
+      double y = yc[k] + bma2 * (yq_gauss[iquad] + 1.0);
 
-      uiqdpt = 0.0;
+      double uiqdpt = 0.0;
       for (int iq = 0; iq < nnodes; iq++) {
         if ((iq == 0) or (iq == 1) or (iq == 3)) {
-          std::tie(bb, bx, by) = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-          ip = node[it][iq];
-          iun = indx[ip][0];
+          auto [bb, bx, by] = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+          int ip = node[it][iq];
+          int iun = indx[ip][0];
           if (0 < iun) {
-            ii = igetl(iun, iline, my);
+            int ii = igetl(iun, iline, my);
             uiqdpt += bb * uprof[ii - 1];
           } else if (iun == -1) {
-            ubc = ubdry(1, yc[ip]);
+            double ubc = ubdry(1, yc[ip]);
             uiqdpt += bb * ubc;
           }
         }
@@ -999,21 +997,21 @@ void gram(
 
       for (int iq = 0; iq < nnodes; iq++) {
         if ((iq == 0) or (iq == 1) or (iq == 3)) {
-          ip = node[it][iq];
-          std::tie(bb, bx, by) = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-          i_val = indx[ip][0];
+          int ip = node[it][iq];
+          auto [bb, bx, by] = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+          int i_val = indx[ip][0];
           if (0 < i_val) {
-            ii = igetl(i_val, iline, my);
+            int ii = igetl(i_val, iline, my);
             r[ii - 1] += bb * uiqdpt * ar;
             for (int iqq = 0; iqq < nnodes; iqq++) {
               if (iqq == 0 or iqq == 1 or iqq == 3) {
-                ipp = node[it][iqq];
-                std::tie(bbb, bbx_, bby_) = qbf(
+                int ipp = node[it][iqq];
+                auto [bbb, bbx_, bby_] = qbf(
                   x, y, it, iqq, nelemn, nnodes, node, n_points, xc, yc
                 );
-                j_val = indx[ipp][0];
+                int j_val = indx[ipp][0];
                 if (j_val != 0) {
-                  jj = igetl(j_val, iline, my);
+                  int jj = igetl(j_val, iline, my);
                   gr[ii - 1][jj - 1] += bb * bbb * ar;
                 }
               }
@@ -1523,8 +1521,8 @@ int nstoke(
 std::tuple<double, double, double> qbf(
   double xq, double yq, int it, 
   int inn, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, 
-  std::vector<double> &xc, std::vector<double> &yc
+  const std::vector<std::vector<int>> &node, int n_points, 
+  const std::vector<double> &xc, const std::vector<double> &yc
 ) {
   int in1, in2, in3, i1, i2, i3, inn_local;
   int j1, j2, j3;
@@ -2024,14 +2022,9 @@ std::tuple<bool, int> setgrd(
 
   neqn = 0;
   int ielemn = 0;
-  int ic = 0;
-  int jc = 0;
-  int icnt = 0;
-  int jcnt = 0;
-  int ip1 = 0;
-  int ip2 = 0;
 
   for (int ip = 0; ip < n_points; ip++) {
+    int ic, jc;
     if (_long) {
       ic = ip / my;
       jc = ip % my;
@@ -2039,10 +2032,11 @@ std::tuple<bool, int> setgrd(
       ic = ip % mx;
       jc = ip / mx;
     }
-    icnt = (ic + 1) % 2;
-    jcnt = (jc + 1) % 2;
+    int icnt = (ic + 1) % 2;
+    int jcnt = (jc + 1) % 2;
 
     if ((icnt == 1 and jcnt == 1) and (ic != mx - 1) and (jc != my - 1)) {
+      int ip1, ip2;
       if (_long) {
         ip1 = ip + my;
         ip2 = ip + my + my;
@@ -2200,7 +2194,7 @@ void setlin(
   int n_points, int nx, int ny, 
   double xlngth, double xprof
 ) {
-  int nodex, itemp, nodex0, ip;
+  int itemp, nodex0, ip;
 
   itemp = std::round(2.0 * (nx - 1) * xprof / xlngth);
 
@@ -2246,26 +2240,16 @@ void setqud(
   std::vector<double> &xc, std::vector<std::vector<double>> &xm,
   std::vector<double> &yc, std::vector<std::vector<double>> &ym
 ) {
-  int ip1 = 0;
-  int ip2 = 0;
-  int ip3 = 0;
-  double x1 = 0.0;
-  double x2 = 0.0;
-  double x3 = 0.0;
-  double y1 = 0.0;
-  double y2 = 0.0;
-  double y3 = 0.0;
-
   for (int it = 0; it < nelemn; it++) {
-    ip1 = node[it][0];
-    ip2 = node[it][1];
-    ip3 = node[it][2];
-    x1 = xc[ip1];
-    x2 = xc[ip2];
-    x3 = xc[ip3];
-    y1 = yc[ip1];
-    y2 = yc[ip2];
-    y3 = yc[ip3];
+    int ip1 = node[it][0];
+    int ip2 = node[it][1];
+    int ip3 = node[it][2];
+    double x1 = xc[ip1];
+    double x2 = xc[ip2];
+    double x3 = xc[ip3];
+    double y1 = yc[ip1];
+    double y2 = yc[ip2];
+    double y3 = yc[ip3];
 
     if (isotri[it] == 0) {
       xm[it][0] = 0.5 * (x1 + x2);
@@ -2309,12 +2293,8 @@ void setxy(
   std::vector<double> &xc, double xlngth, 
   std::vector<double> &yc, double ylngth, double ypert
 ) {
-  int ic = 0;
-  int jc = 0;
-  double ybot = 0.0;
-  double ylo = 0.0;
-
   for (int ip = 0; ip < n_points; ip++){
+    int ic, jc;
     if (_long) {
       ic = ip / my;
       jc = ip % my;
@@ -2324,8 +2304,8 @@ void setxy(
     }
     xc[ip] = ic * xlngth / (2 * nx - 2);
 
-    ybot = -ypert * (xc[ip] - 3.0) * (xc[ip] - 1.0);
-    ylo = std::max(0.0, ybot);
+    double ybot = -ypert * (xc[ip] - 3.0) * (xc[ip] - 1.0);
+    double ylo = std::max(0.0, ybot);
 
     yc[ip] = ((my - 1 - jc) * ylo + jc * ylngth) / (2 * ny - 2);
   }
@@ -2350,8 +2330,6 @@ void timestamp()
   //? Formato: Año-Mes-Dia Hora:Minuto:Segundo
   //? %F -> %Y-%m-%d, %T -> %H:%M:%S
   std::println("{0:%Y-%m-%d %H:%M:%S}", ahora);
-
-  return;
 }
 
 //* --------------------------------------------------------------------
@@ -2359,10 +2337,10 @@ void timestamp()
 //* --------------------------------------------------------------------
 std::tuple<double, double, double, double, double> trans(
   int it, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, 
+  const std::vector<std::vector<int>> &node, 
   int n_points, 
-  std::vector<double> &xc, double xq, 
-  std::vector<double> &yc, double yq
+  const std::vector<double> &xc, double xq, 
+  const std::vector<double> &yc, double yq
 ) {
   int i1 = node[it][0];
   int i2 = node[it][1];
@@ -2411,7 +2389,7 @@ std::tuple<double, double, double, double, double> trans(
     - d2 * e1
   );
 
-  double eps = 1e-30;
+  constexpr double eps = 1e-30;
   if (std::abs(det) < eps)
     det = eps;
 
@@ -2437,14 +2415,14 @@ inline double ubdry(int iuk, double yy) {
 //*  UBUMP - sensitivity dU/dA on the bump
 //* --------------------------------------------------------------------
 double ubump(
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
   int ip, int iqq,
-  std::vector<int> &isotri,
+  const std::vector<int> &isotri,
   int it, int iukk, int nelemn,
   int neqn, int nnodes,
-  std::vector<std::vector<int>> &node, int n_points,
-  std::vector<double> &xc, std::vector<double> &yc
+  const std::vector<std::vector<int>> &node, int n_points,
+  const std::vector<double> &xc, const std::vector<double> &yc
 ) {
   double det = 1.0;
   double etax = 0.0;
@@ -2500,14 +2478,14 @@ double ubump(
   }
 }
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump_uval(
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &isotri,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
+  const std::vector<int> &isotri,
   int it, int nelemn, int neqn, int nnodes,
-  std::vector<std::vector<int>> &node,
-  int n_points, std::vector<double> &xc,
+  const std::vector<std::vector<int>> &node,
+  int n_points, const std::vector<double> &xc,
   double xix, double xiy, double xq,
-  std::vector<double> &yc,
+  const std::vector<double> &yc,
   double yq, double det, double etax, double etay
 ) {
   std::vector<double> un(2, 0.0);
@@ -2515,17 +2493,16 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump
   std::vector<double> uny(2, 0.0);
   
   double bb, bx, by, ubc;
-  int iun, ip_local;
 
   for (int iq = 0; iq < nnodes; iq++) {
     if (isotri[it] == 1)
       std::tie(bb, bx, by) = refqbf(xq, yq, iq, etax, etay, xix, xiy);
     else
       std::tie(bb, bx, by) = qbf(xq, yq, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-    ip_local = node[it][iq];
+    int ip_local = node[it][iq];
 
     for (int iuk = 0; iuk < 2; iuk++) {
-      iun = indx[ip_local][iuk];
+      int iun = indx[ip_local][iuk];
       if (0 < iun) {
         un[iuk] += bb * g[iun - 1];
         unx[iuk] += bx * g[iun - 1];
@@ -2548,26 +2525,25 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
   double etax,
   double etay,
-  std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &isotri,
+  const std::vector<double> &g,
+  const std::vector<std::vector<int>> &indx,
+  const std::vector<int> &isotri,
   int it,
   int nelemn,
   int neqn,
   int nnodes,
-  std::vector<std::vector<int>> &node,
+  const std::vector<std::vector<int>> &node,
   int n_points,
-  std::vector<double> &xc,
+  const std::vector<double> &xc,
   double xix,
   double xiy,
   double xq,
-  std::vector<double> &yc,
+  const std::vector<double> &yc,
   double yq
 ) {
-  std::vector<double >un(2, 0.0);
-  std::vector<double >unx(2, 0.0);
-  std::vector<double >uny(2, 0.0);
-  int iun, ip_local;
+  std::vector<double> un(2, 0.0);
+  std::vector<double> unx(2, 0.0);
+  std::vector<double> uny(2, 0.0);
   double bb, bx, by, ubc;
 
   for (int iq = 0; iq < nnodes; iq++) {
@@ -2576,10 +2552,10 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
     else
       std::tie(bb, bx, by) = qbf(xq, yq, it, iq, nelemn, nnodes, node, n_points, xc, yc);
     
-    ip_local = node[it][iq];
+    int ip_local = node[it][iq];
 
     for (int iuk = 0; iuk < 2; iuk++) {
-      iun = indx[ip_local][iuk];
+      int iun = indx[ip_local][iuk];
       if (0 < iun) {
         un[iuk] += bb * g[iun - 1];
         unx[iuk] += bx * g[iun - 1];
