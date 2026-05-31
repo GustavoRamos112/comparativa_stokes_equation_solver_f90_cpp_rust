@@ -25,286 +25,272 @@ namespace fs = std::filesystem;
 const bool save_times = true;
 
 //* -------------------------------------------------------------------
+//* Dimensiones del problema (constexpr global para arrays planos)
+constexpr int nx = 21;
+constexpr int ny = 7;
+constexpr int maxrow = 27 * ny;
+constexpr int nelemn = 2 * (nx - 1) * (ny - 1);
+constexpr int mx = 2 * nx - 1;
+constexpr int my = 2 * ny - 1;
+constexpr int maxeqn = 2 * mx * my + nx * ny;
+constexpr int n_points = mx * my;
+constexpr int nnodes = 6;
+constexpr int nquad = 3;
+constexpr int maxnew = 4;
+constexpr int maxsec = 10;
+
+//* Funciones auxiliares de indexacion para arrays planos
+constexpr int phi_idx(int it, int iquad, int iq, int k) {
+    return ((it * nquad + iquad) * nnodes + iq) * 3 + k;
+}
+constexpr int psi_idx(int it, int iquad, int iq) {
+    return (it * nquad + iquad) * nnodes + iq;
+}
+
+//* -------------------------------------------------------------------
 //* Declaracion de funciones
 void timestamp();
 std::tuple<bool, int> setgrd(
-  int ibump, 
-  std::vector<std::vector<int>> &indx, 
-  std::vector<int> &insc,
-  std::vector<int> &isotri, 
+  int ibump,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc,
+  std::array<int, nelemn> &isotri,
+  std::array<int, nelemn * nnodes> &node,
   int iwrite, bool _long, int maxeqn,
-  int mx, int my, int nelemn,
-  int neqn, int nnodes,
-  std::vector<std::vector<int>> &node, 
-  int n_points, int nx, int ny,
+  int neqn,
   double xbleft, double xbrite, double xlngth
 );
 void setxy(
-  int iwrite, bool _long, int mx, int my, int n_points, 
-  int nx, int ny, 
-  std::vector<double> &xc, double xlngth, 
-  std::vector<double> &yc, double ylngth, double ypert
+  int iwrite, bool _long,
+  std::array<double, n_points> &xc, double xlngth,
+  std::array<double, n_points> &yc, double ylngth, double ypert
 );
 void setqud(
-  std::vector<double> &area, std::vector<int> &isotri, int iwrite,
-  int nelemn, int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, nelemn> &area, std::array<int, nelemn> &isotri, int iwrite,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 );
 void setbas(
-  const std::vector<int> &isotri, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, int nquad, 
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi, 
-  std::vector<std::vector<std::vector<double>>> &psi, 
-  std::vector<double> &xc, 
-  std::vector<std::vector<double>> &xm, 
-  std::vector<double> &yc, 
-  std::vector<std::vector<double>> &ym
+  const std::array<int, nelemn> &isotri,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
+  std::array<double, n_points> &xc,
+  std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc,
+  std::array<double, nelemn * nquad> &ym
 );
 std::tuple<double, double, double, double, double> trans(
-  int it, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, 
-  int n_points, 
-  const std::vector<double> &xc, double xq, 
-  const std::vector<double> &yc, double yq
+  int it,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, double xq,
+  const std::array<double, n_points> &yc, double yq
 );
 double bsp(
-  int it, int iq, int id, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, int n_points, 
-  const std::vector<double> &xc, double xq, 
-  const std::vector<double> &yc, double yq
+  int it, int iq, int id,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, double xq,
+  const std::array<double, n_points> &yc, double yq
 );
 inline int i4_modp(int i, int j);
 inline int i4_wrap(int ival, int ilo, int ihi);
 inline double ubdry(int iuk, double yy);
 inline double refbsp(double xq, double yq, int iq);
-inline int igetl(int i, std::vector<int> &iline, int my);
+inline int igetl(int i, const std::array<int, my> &iline);
 std::tuple<double, double, double> refqbf(
-  double x, double y, int inn, 
-  double etax, double etay, 
+  double x, double y, int inn,
+  double etax, double etay,
   double xix, double xiy
 );
 std::tuple<double, double, double> qbf(
-  double xq, double yq, int it, 
-  int inn, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, int n_points, 
-  const std::vector<double> &xc, const std::vector<double> &yc
+  double xq, double yq, int it,
+  int inn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, const std::array<double, n_points> &yc
 );
 void setlin(
-  std::vector<int> &iline, 
-  std::vector<std::vector<int>> &indx, 
-  int iwrite, bool _long, int mx, int my, 
-  int n_points, int nx, int ny, 
+  std::array<int, my> &iline,
+  std::array<int, n_points * 2> &indx,
+  int iwrite, bool _long,
   double xlngth, double xprof
 );
 std::tuple<int, int, int> setban(
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, int maxrow,
-  int nband, int nelemn, int nlband,
-  int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, int nrow
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, int maxrow,
+  int nband, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow
 );
 int nstoke(
-  std::vector<std::vector<double>> &a,
-  std::vector<double> &area,
+  std::vector<double> &a,
+  std::array<double, nelemn> &area,
   std::vector<double> &f, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
-  int maxnew, int maxrow, int nband,
-  int nelemn, int neqn, int nlband,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad, int nrow,
-  int numnew,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
+  int maxrow, int nband,
+  int neqn, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow, int numnew,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
   double reynld, double tolnew,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 );
 int idamax_v(int n, std::vector<double> &dx, int incx);
-int idamax_m(int n, const std::vector<std::vector<double>>& abd, int col, int start_row, int incx);
+int idamax_m(int n, const std::vector<double>& abd, int stride, int col, int start_row, int incx);
 void dscal_v(
-  int n, double sa, 
+  int n, double sa,
   std::vector<double>& x, int incx
 );
 void dscal_m(
-  int n, double sa, 
-  std::vector<std::vector<double>>& abd, 
-  int col, int start_row, int incx
+  int n, double sa,
+  std::vector<double>& abd,
+  int stride, int col, int start_row, int incx
 );
 void daxpy_v(
-  int n, double da, 
-  std::vector<double>& dx, int incx, 
+  int n, double da,
+  std::vector<double>& dx, int incx,
   std::vector<double>& dy, int incy
 );
 void daxpy_m(
-  int n, double da, 
-  std::vector<std::vector<double>> &abd_x, 
-  int col_x, int start_row_x, int incx,
-  std::vector<std::vector<double>>& abd_y, 
+  int n, double da,
+  std::vector<double> &abd,
+  int stride, int col_x, int start_row_x, int incx,
   int col_y, int start_row_y, int incy
 );
 void daxpy(
-  int n, double da, 
-  const std::vector<std::vector<double>>& abd_x, int col_x, int start_row_x, int incx,
+  int n, double da,
+  const std::vector<double>& abd_x, int stride, int col_x, int start_row_x, int incx,
   std::vector<double>& b_y, int start_idx_y, int incy
 );
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> uval(
   double etax,
   double etay,
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
-  const std::vector<int> &isotri,
+  const std::array<int, n_points * 2> &indx,
+  const std::array<int, nelemn> &isotri,
   int it,
-  int nelemn,
   int neqn,
-  int nnodes,
-  const std::vector<std::vector<int>> &node,
-  int n_points,
-  const std::vector<double> &xc,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc,
   double xix,
   double xiy,
   double xq,
-  const std::vector<double> &yc,
+  const std::array<double, n_points> &yc,
   double yq
 );
 double ubump(
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
+  const std::array<int, n_points * 2> &indx,
   int ip, int iqq,
-  const std::vector<int> &isotri,
-  int it, int iukk, int nelemn,
-  int neqn, int nnodes,
-  const std::vector<std::vector<int>> &node, int n_points,
-  const std::vector<double> &xc, const std::vector<double> &yc
+  const std::array<int, nelemn> &isotri,
+  int it, int iukk,
+  int neqn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, const std::array<double, n_points> &yc
 );
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump_uval(
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> _ubump_uval(
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
-  const std::vector<int> &isotri,
-  int it, int nelemn, int neqn, int nnodes,
-  const std::vector<std::vector<int>> &node,
-  int n_points, const std::vector<double> &xc,
+  const std::array<int, n_points * 2> &indx,
+  const std::array<int, nelemn> &isotri,
+  int it, int neqn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc,
   double xix, double xiy, double xq,
-  const std::vector<double> &yc,
+  const std::array<double, n_points> &yc,
   double yq, double det, double etax, double etay
 );
 double ddot(
-  int n, 
-  const std::vector<std::vector<double>> &abd, 
-  int col, int row_start, int incx, 
+  int n,
+  const std::vector<double> &abd,
+  int stride, int col, int row_start, int incx,
   const std::vector<double> &b, int start_b, int incy
 );
 void resid(
-  std::vector<double> &area, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
-  int iwrite, int nelemn, int neqn,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi, 
-  std::vector<double> &res, double reynld, 
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm, 
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, nelemn> &area, std::vector<double> &g,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
+  int iwrite, int neqn,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
+  std::vector<double> &res, double reynld,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 );
-std::vector<double> getg(
-  const std::vector<double> &f, const std::vector<int> &iline, int my, int neqn
+std::array<double, my> getg(
+  const std::vector<double> &f, const std::array<int, my> &iline, int neqn
 );
 void gram(
-  std::vector<std::vector<double>> &gr, 
-  std::vector<int> &iline, 
-  std::vector<std::vector<int>> &indx, 
-  int iwrite, int my, int nelemn, 
-  int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, std::vector<double> &r, 
-  std::vector<double> &uprof, 
-  std::vector<double> &xc, double xprof, 
-  std::vector<double> &yc
+  std::array<double, my * my> &gr,
+  std::array<int, my> &iline,
+  std::array<int, n_points * 2> &indx,
+  int iwrite,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, my> &r,
+  std::array<double, my> &uprof,
+  std::array<double, n_points> &xc, double xprof,
+  std::array<double, n_points> &yc
 );
 std::string file_name_inc(std::string file_name);
 void xy_write(
-  std::ofstream& xy_file_obj, int n_points, 
-  std::vector<double>& xc, std::vector<double>& yc
+  std::ofstream& xy_file_obj,
+  std::array<double, n_points>& xc, std::array<double, n_points>& yc
 );
 void uv_write(
-  const std::vector<double>& f, 
-  const std::vector<std::vector<int>>& indx, 
-  std::ofstream& uv_file_obj, 
-  int neqn, int n_points, 
-  const std::vector<double>& yc
+  const std::vector<double>& f,
+  const std::array<int, n_points * 2>& indx,
+  std::ofstream& uv_file_obj,
+  int neqn,
+  const std::array<double, n_points>& yc
 );
 void linsys(
-  std::vector<std::vector<double>> &a, 
-  std::vector<double> &area,
+  std::vector<double> &a,
+  std::array<double, nelemn> &area,
   std::vector<double> &f, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
   int itype, int maxrow, int nband,
-  int nelemn, int neqn, int nlband,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad, int nrow,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi, double reynld,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  int neqn, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi, double reynld,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 );
 //* -------------------------------------------------------------------
 
 int main(void)
 {
-  constexpr int maxnew = 4;
-  constexpr int maxsec = 10;
-  constexpr int nx = 21;
-  constexpr int ny = 7;
-  constexpr int maxrow = 27 * ny;
-  constexpr int nelemn = 2 * (nx - 1) * (ny - 1);
-  constexpr int mx = 2 * nx - 1;
-  constexpr int my = 2 * ny - 1;
-  constexpr int maxeqn = 2 * mx * my + nx * ny;
-  constexpr int n_points = mx * my;
-  constexpr int nnodes = 6;
-  constexpr int nquad = 3;
-
-  std::vector<std::vector<double>> a;
   double anew = 0.0;
   double anext = 0.3;
   double aold = 0.0;
   double aprof = 0.25;
-  std::vector<double> area(nelemn, 0.0);
-  std::vector<double> dcda(my, 0.0);
+  std::array<double, nelemn> area{};
+  std::array<double, my> dcda{};
+  std::vector<double> a;
   std::vector<double> f;
   std::vector<double> g;
-  std::vector<std::vector<double>> gr(my, std::vector<double>(my, 0.0));
-  std::vector<int> iline(my, 0);
-  std::vector<std::vector<int>> indx(n_points, std::vector<int>(2, 0));
-  std::vector<int> insc(n_points, 0);
-  std::vector<int> isotri(nelemn, 0);
+  std::array<double, my * my> gr{};
+  std::array<int, my> iline{};
+  std::array<int, n_points * 2> indx{};
+  std::array<int, n_points> insc{};
+  std::array<int, nelemn> isotri{};
   int iwrite = 0;
   bool _long = false;
   int nband = 0;
   int neqn = 0;
   int nlband = 0;
-  std::vector<std::vector<int>> node(nelemn, std::vector<int>(nnodes, 0));
+  std::array<int, nelemn * nnodes> node{};
   int nrow = 0;
   int numnew = 0;
   int numsec = 0;
-  // phi = np.zeros((nelemn, nquad, nnodes, 3), dtype=np.float64)
-  std::vector<std::vector<std::vector<std::vector<double>>>> phi(
-    nelemn, std::vector<std::vector<std::vector<double>>>(
-        nquad, std::vector<std::vector<double>>(
-          nnodes, std::vector<double>(3, 0.0)
-        )
-    )
-  );
-  // psi = np.zeros((nelemn, nquad, nnodes), dtype=np.float64)
-  std::vector<std::vector<std::vector<double>>> psi(
-    nelemn, std::vector<std::vector<double>>(
-      nquad, std::vector<double>(nnodes, 0.0)
-    )
-  );
-  std::vector<double> r(my, 0.0);
+  std::array<double, nelemn * nquad * nnodes * 3> phi{};
+  std::array<double, nelemn * nquad * nnodes> psi{};
+  std::array<double, my> r{};
   std::vector<double> res;
   double reynld = 1.0;
   double rjpnew = 0.0;
@@ -312,20 +298,20 @@ int main(void)
   std::vector<double> sens;
   double tolnew = 0.0001;
   double tolsec = 0.0001;
-  std::vector<double> uprof(my, 0.0);
+  std::array<double, my> uprof{};
   std::string uv_dir = "data/uv";
   std::string uv_file = std::format("{}/uv_000.txt", uv_dir);
   double xbleft = 1.0;
   double xbrite = 3.0;
-  std::vector<double> xc(n_points, 0.0);
+  std::array<double, n_points> xc{};
   double xlngth = 10.0;
-  std::vector<std::vector<double>> xm(nelemn, std::vector<double>(nquad, 0.0));
+  std::array<double, nelemn * nquad> xm{};
   double xprof = 4.0;
   std::string xy_dir = "data/xy";
   std::string xy_file = std::format("{}\\xy_000.txt", xy_dir);
-  std::vector<double> yc(n_points, 0.0);
+  std::array<double, n_points> yc{};
   double ylngth = 3.0;
-  std::vector<std::vector<double>> ym(nelemn, std::vector<double>(nquad, 0.0));
+  std::array<double, nelemn * nquad> ym{};
   double ypert = 0.0;
   int itype;
   double temp, denom, test;
@@ -358,11 +344,9 @@ int main(void)
   int ibump = 2;
   std::tie(_long, neqn) = setgrd(
     ibump, indx, insc,
-    isotri, iwrite, _long,
-    maxeqn, mx, my,
-    nelemn, neqn, nnodes,
-    node, n_points, nx,
-    ny, xbleft, xbrite, xlngth
+    isotri, node, iwrite, _long,
+    maxeqn, neqn,
+    xbleft, xbrite, xlngth
   );
 
   f.resize(neqn, 0.0);
@@ -372,37 +356,37 @@ int main(void)
 
 
   ypert = aprof;
-  setxy(iwrite, _long, mx, my, n_points, nx, ny, xc, xlngth, yc, ylngth, ypert);
+  setxy(iwrite, _long, xc, xlngth, yc, ylngth, ypert);
 
-  setqud(area, isotri, iwrite, nelemn, nnodes, node, n_points, nquad, xc, xm, yc, ym);
+  setqud(area, isotri, iwrite, node, xc, xm, yc, ym);
 
-  setbas(isotri, nelemn, nnodes, node, n_points, nquad, phi, psi, xc, xm, yc, ym);
+  setbas(isotri, node, phi, psi, xc, xm, yc, ym);
 
-  setlin(iline, indx, iwrite, _long, mx, my, n_points, nx, ny, xlngth, xprof);
+  setlin(iline, indx, iwrite, _long, xlngth, xprof);
 
   std::tie(nband, nlband, nrow) = setban(
-    indx, insc, maxrow, nband, nelemn, nlband, nnodes, node, n_points, nrow
+    indx, insc, maxrow, nband, nlband, node, nrow
   );
 
-  a.resize(nrow, std::vector<double>(neqn, 0.0));
+  a.resize(nrow * neqn, 0.0);
 
   numnew = nstoke(
     a, area, f, g, indx, insc, isotri,
-    maxnew, maxrow, nband,
-    nelemn, neqn, nlband,
-    nnodes, node, n_points, nquad, nrow,
-    numnew, phi, psi, reynld, tolnew,
+    maxrow, nband,
+    neqn, nlband,
+    node, nrow, numnew,
+    phi, psi, reynld, tolnew,
     xc, xm, yc, ym
   );
   
   resid(
     area, g, indx, insc, isotri,
-    iwrite, nelemn, neqn, nnodes, node, n_points,
-    nquad, phi, psi, res, reynld, xc,
-    xm, yc, ym
+    iwrite, neqn, node,
+    phi, psi, res, reynld,
+    xc, xm, yc, ym
   );
 
-  uprof = getg(g, iline, my, neqn);
+  uprof = getg(g, iline, neqn);
 
   if (1 <= iwrite) {
     std::println();
@@ -417,28 +401,24 @@ int main(void)
   }
 
   gram(
-    gr, iline, indx, iwrite, my, nelemn, 
-    nnodes, node, n_points, r, uprof, xc, xprof, yc
+    gr, iline, indx, iwrite, node, r, uprof, xc, xprof, yc
   );
 
   xy_file = file_name_inc(xy_file);
 
-  std::ofstream f_xy(xy_file); // Abre el archivo en modo escritura
+  std::ofstream f_xy(xy_file);
   if (f_xy.is_open()) {
-    xy_write(f_xy, n_points, xc, yc);
+    xy_write(f_xy, xc, yc);
     f_xy.close();
   }
 
   uv_file = file_name_inc(uv_file);
-  //uv_unit = get_unit()
   std::ofstream f_uv(uv_file);
   if (f_uv.is_open()) {
-    // Llamada a uv_write con los parámetros correctos
-    uv_write(f, indx, f_uv, neqn, n_points, yc);
+    uv_write(f, indx, f_uv, neqn, yc);
     f_uv.close();
   }
 
-  //g[:neqn] = 0.0
   for(int i = 0; i < neqn; i++) {
     g[i] = 0.0;
   }
@@ -451,22 +431,22 @@ int main(void)
     numsec += 1;
 
     ypert = anew;
-    setxy(iwrite, _long, mx, my, n_points, nx, ny, xc, xlngth, yc, ylngth, ypert);
+    setxy(iwrite, _long, xc, xlngth, yc, ylngth, ypert);
 
-    setqud(area, isotri, iwrite, nelemn, nnodes, node, n_points, nquad, xc, xm, yc, ym);
+    setqud(area, isotri, iwrite, node, xc, xm, yc, ym);
 
-    setbas(isotri, nelemn, nnodes, node, n_points, nquad, phi, psi, xc, xm, yc, ym);
+    setbas(isotri, node, phi, psi, xc, xm, yc, ym);
 
     numnew = nstoke(
       a, area, f, g, indx, insc,
-      isotri, maxnew, maxrow, nband,
-      nelemn, neqn, nlband, nnodes, node, 
-      n_points, nquad, nrow, numnew, phi,
+      isotri, maxrow, nband,
+      neqn, nlband, node,
+      nrow, numnew, phi,
       psi, reynld, tolnew, xc,
       xm, yc, ym
     );
 
-    uprof = getg(g, iline, my, neqn);
+    uprof = getg(g, iline, neqn);
 
     if (1 <= iwrite) {
       std::println();
@@ -483,12 +463,12 @@ int main(void)
 
     linsys(
       a, area, sens, g, indx, insc, isotri, itype, maxrow,
-      nband, nelemn, neqn, nlband, nnodes, node,
-      n_points, nquad, nrow, phi, psi,
+      nband, neqn, nlband, node,
+      nrow, phi, psi,
       reynld, xc, xm, yc, ym
     );
 
-    dcda = getg(sens, iline, my, neqn);
+    dcda = getg(sens, iline, neqn);
 
     if (2 <= iwrite) {
       std::println();
@@ -507,25 +487,23 @@ int main(void)
     for (int i = 0; i < my; i++) {
       temp = -r[i];
       for (int j = 0; j < my; j++) {
-        temp += gr[i][j] * uprof[j];
+        temp += gr[i * my + j] * uprof[j];
       }
       rjpnew += 2.0 * dcda[i] * temp;
     }
 
     xy_file = file_name_inc(xy_file);
 
-    std::ofstream f_xy(xy_file); // Abre el archivo en modo escritura
+    std::ofstream f_xy(xy_file);
     if (f_xy.is_open()) {
-      xy_write(f_xy, n_points, xc, yc);
+      xy_write(f_xy, xc, yc);
       f_xy.close();
     }
 
     uv_file = file_name_inc(uv_file);
-    //uv_unit = get_unit()
     std::ofstream f_uv(uv_file);
     if (f_uv.is_open()) {
-      // Llamada a uv_write con los parámetros correctos
-      uv_write(f, indx, f_uv, neqn, n_points, yc);
+      uv_write(f, indx, f_uv, neqn, yc);
       f_uv.close();
     }
 
@@ -583,25 +561,25 @@ int main(void)
 //*  BSP - linear basis function for pressure
 //* --------------------------------------------------------------------
 double bsp(
-  int it, int iq, int id, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, int n_points, 
-  const std::vector<double> &xc, double xq, 
-  const std::vector<double> &yc, double yq
+  int it, int iq, int id,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, double xq,
+  const std::array<double, n_points> &yc, double yq
 ) {
   int l1 = iq;
-  int l2 = i4_wrap(iq + 1, 0, 2);  // 0-indexed: 1->2, 2->0, 3->1
+  int l2 = i4_wrap(iq + 1, 0, 2);
   int l3 = i4_wrap(iq + 2, 0, 2);
 
-  int g1 = node[it][l1];
-  int g2 = node[it][l2];
-  int g3 = node[it][l3];
+  int g1 = node[it * nnodes + l1];
+  int g2 = node[it * nnodes + l2];
+  int g3 = node[it * nnodes + l3];
 
   double d = (
     (xc[g2] - xc[g1]) * (yc[g3] - yc[g1]) 
     - (xc[g3] - xc[g1]) * (yc[g2] - yc[g1])
   );
 
-  if (id == 0)  // 0-indexed: id == 1 -> 0
+  if (id == 0)
     return (
       1.0 + ((yc[g2] - yc[g3]) * (xq - xc[g1]) + (xc[g3] - xc[g2]) * (yq - yc[g1])) / d
     );
@@ -657,27 +635,26 @@ void daxpy_v(
 }
 void daxpy_m(
   int n, double da, 
-  std::vector<std::vector<double>> &abd_x, 
-  int col_x, int start_row_x, int incx,
-  std::vector<std::vector<double>>& abd_y, 
+  std::vector<double> &abd,
+  int stride, int col_x, int start_row_x, int incx,
   int col_y, int start_row_y, int incy
 ) {
   if (n <= 0 || da == 0.0) return;
 
   for (int i = 0; i < n; ++i) {
-    abd_y[start_row_y + (i * incy)][col_y] += da * abd_x[start_row_x + (i * incx)][col_x];
+    abd[(start_row_y + (i * incy)) * stride + col_y] += da * abd[(start_row_x + (i * incx)) * stride + col_x];
   }
 }
 void daxpy(
   int n, double da, 
-  const std::vector<std::vector<double>>& abd_x, int col_x, int start_row_x, int incx,
+  const std::vector<double>& abd_x, int stride, int col_x, int start_row_x, int incx,
   std::vector<double>& b_y, int start_idx_y, int incy
 ) {
     
     if (n <= 0 || da == 0.0) return;
 
     for (int i = 0; i < n; ++i) {
-        b_y[start_idx_y + (i * incy)] += da * abd_x[start_row_x + (i * incx)][col_x];
+        b_y[start_idx_y + (i * incy)] += da * abd_x[(start_row_x + (i * incx)) * stride + col_x];
     }
 }
 
@@ -686,8 +663,8 @@ void daxpy(
 //* --------------------------------------------------------------------
 double ddot(
   int n, 
-  const std::vector<std::vector<double>> &abd, 
-  int col, int row_start, int incx, 
+  const std::vector<double> &abd,
+  int stride, int col, int row_start, int incx, 
   const std::vector<double> &b, int start_b, int incy
 ) {
     
@@ -695,31 +672,27 @@ double ddot(
 
   double dtemp = 0.0;
 
-  // Caso cuando los incrementos no son unitarios
   if (incx != 1 || incy != 1) {
     int ix = row_start;
     int iy = start_b;
     for (int i = 0; i < n; ++i) {
-      dtemp += abd[ix][col] * b[iy];
+      dtemp += abd[ix * stride + col] * b[iy];
       ix += incx;
       iy += incy;
     }
   } 
-  // Caso con incremento unitario (Optimización manual)
   else {
     int m = n % 5;
-    // Procesar el resto
     for (int i = 0; i < m; ++i) {
-      dtemp += abd[row_start + i][col] * b[start_b + i];
+      dtemp += abd[(row_start + i) * stride + col] * b[start_b + i];
     }
-    // Procesar en bloques de 5
     for (int i = m; i < n; i += 5) {
       dtemp += (
-        abd[row_start + i][col] * b[start_b + i]
-        + abd[row_start + i + 1][col] * b[start_b + i + 1]
-        + abd[row_start + i + 2][col] * b[start_b + i + 2]
-        + abd[row_start + i + 3][col] * b[start_b + i + 3]
-        + abd[row_start + i + 4][col] * b[start_b + i + 4]
+        abd[(row_start + i) * stride + col] * b[start_b + i]
+        + abd[(row_start + i + 1) * stride + col] * b[start_b + i + 1]
+        + abd[(row_start + i + 2) * stride + col] * b[start_b + i + 2]
+        + abd[(row_start + i + 3) * stride + col] * b[start_b + i + 3]
+        + abd[(row_start + i + 4) * stride + col] * b[start_b + i + 4]
       );
     }
   }
@@ -731,50 +704,50 @@ double ddot(
 //*  DGBFA - factor a real band matrix by elimination
 //* --------------------------------------------------------------------
 std::tuple<int, std::vector<int>> dgbfa(
-  std::vector<std::vector<double>> &abd, int lda, 
+  std::vector<double> &abd, int lda, 
   int n, int ml, int mu, 
   std::vector<int> &ipvt
 ) {
   int m = ml + mu + 1;
   int info = 0;
 
-  int j0 = mu + 1;  // 0-indexed adjustment
+  int j0 = mu + 1;
   int j1 = std::min(n, m) - 1;
   int i0;
-  double t;
 
   for (int jz = j0; jz < j1; jz++) {
     i0 = m - jz;
     for (int i = i0; i < ml; i++) {
-      abd[i][jz] = 0.0;
+      abd[i * n + jz] = 0.0;
     }
   }
 
   int jz = j1;
   int ju = 0, lm, l, mm;
 
+  double t;
   for (int k = 0; k < n - 1; k++) {
     jz += 1;
     if (jz < n)
       for (int i = 0; i < ml; i++) {
-        abd[i][jz] = 0.0;
+        abd[i * n + jz] = 0.0;
       }
 
     lm = std::min(ml, n - k - 1);
-    l = idamax_m(lm + 1, abd, k, m - 1, 1) + (m - 1);
+    l = idamax_m(lm + 1, abd, n, k, m - 1, 1) + (m - 1);
     ipvt[k] = l + k - (m - 1);
 
-    if (abd[l][k] == 0.0)
+    if (abd[l * n + k] == 0.0)
       info = k;
     else {
       if (l != m - 1) {
-        double t = abd[l][k];
-        abd[l][k] = abd[m - 1][k];
-        abd[m - 1][k] = t;
+        t = abd[l * n + k];
+        abd[l * n + k] = abd[(m - 1) * n + k];
+        abd[(m - 1) * n + k] = t;
       }
 
-      t = -1.0 / abd[m - 1][k];
-      dscal_m(lm, t, abd, k, m, 1);
+      t = -1.0 / abd[(m - 1) * n + k];
+      dscal_m(lm, t, abd, n, k, m, 1);
 
       ju = std::min(std::max(ju, mu + ipvt[k]), n - 1);
       mm = m - 1;
@@ -782,19 +755,19 @@ std::tuple<int, std::vector<int>> dgbfa(
       for (int j = k + 1; j < ju + 1; j++) {
         l -= 1;
         mm -= 1;
-        double t = abd[l][j];
+        t = abd[l * n + j];
         if (l != mm) {
-          abd[l][j] = abd[mm][j];
-          abd[mm][j] = t;
+          abd[l * n + j] = abd[mm * n + j];
+          abd[mm * n + j] = t;
         }
-        daxpy_m(lm, t, abd, k, m, 1, abd, j, mm + 1, 1);
+        daxpy_m(lm, t, abd, n, k, m, 1, j, mm + 1, 1);
       }
     }
   }
 
   ipvt[n - 1] = n - 1;
 
-  if (abd[m - 1][n - 1] == 0.0)
+  if (abd[(m - 1) * n + (n - 1)] == 0.0)
     info = n - 1;
 
   return std::tuple {info, ipvt};
@@ -804,7 +777,7 @@ std::tuple<int, std::vector<int>> dgbfa(
 //*  DGBSL - solve a real banded system factored by DGBFA
 //* --------------------------------------------------------------------
 void dgbsl(
-  std::vector<std::vector<double>> &abd, int lda,
+  std::vector<double> &abd, int lda,
   int n, int ml, int mu,
   std::vector<int> &ipvt, 
   std::vector<double> &b, int job
@@ -823,31 +796,31 @@ void dgbsl(
           b[l] = b[k];
           b[k] = t;
         }
-        daxpy(lm, t, abd, k, m, 1, b, k + 1, 1);
+        daxpy(lm, t, abd, n, k, m, 1, b, k + 1, 1);
       }
     }
 
     for (int k = n - 1; k >= 0; k--) {
-      b[k] /= abd[m - 1][k];
+      b[k] /= abd[(m - 1) * n + k];
       lm = std::min(k, m - 1);
       la = m - 1 - lm;
       lb = k - lm;
       t = -b[k];
-      daxpy(lm, t, abd, k, la, 1, b, lb, 1);
+      daxpy(lm, t, abd, n, k, la, 1, b, lb, 1);
     }
   } else {
     for (int k = 0; k < n; k++) {
       lm = std::min(k, m - 1);
       la = m - 1 - lm;
       lb = k - lm;
-      t = ddot(lm, abd, k, la, 1, b, lb, 1);
-      b[k] = (b[k] - t) / abd[m - 1][k];
+      t = ddot(lm, abd, n, k, la, 1, b, lb, 1);
+      b[k] = (b[k] - t) / abd[(m - 1) * n + k];
     }
 
     if (0 < ml) {
       for (int k = n - 2; k >= 0; k--) {
         lm = std::min(ml, n - k - 1);
-        b[k] += ddot(lm, abd, k, m, 1, b, k + 1, 1);
+        b[k] += ddot(lm, abd, n, k, m, 1, b, k + 1, 1);
         l = ipvt[k];
         if (l != k) {
           t = b[l];
@@ -890,11 +863,11 @@ void dscal_v(
     }
   }
 }
-void dscal_m(int n, double sa, std::vector<std::vector<double>>& abd, int col, int start_row, int incx) {
+void dscal_m(int n, double sa, std::vector<double>& abd, int stride, int col, int start_row, int incx) {
   if (n <= 0) return;
 
   for (int i = 0; i < n; ++i) {
-    abd[start_row + (i * incx)][col] *= sa;
+    abd[(start_row + (i * incx)) * stride + col] *= sa;
   }
 }
 //* --------------------------------------------------------------------
@@ -908,7 +881,6 @@ std::string file_name_inc(std::string file_name) {
   }
 
   int change = 0;
-  // Recorremos el string desde el final hacia el inicio
   for (int i = file_name.length() - 1; i >= 0; --i) {
     if (file_name[i] >= '0' && file_name[i] <= '9') {
       change++;
@@ -920,7 +892,7 @@ std::string file_name_inc(std::string file_name) {
         file_name[i] = '0';
       } else {
         file_name[i] = static_cast<char>(digit + '0');
-        return file_name; // Retorno temprano si no hay acarreo
+        return file_name;
       }
   }
   }
@@ -931,17 +903,17 @@ std::string file_name_inc(std::string file_name) {
 //* --------------------------------------------------------------------
 //*  GETG - extract values of a quantity along the profile line
 //* --------------------------------------------------------------------
-std::vector<double> getg(
-  const std::vector<double> &f, const std::vector<int> &iline, int my, int neqn
+std::array<double, my> getg(
+  const std::vector<double> &f, const std::array<int, my> &iline, int neqn
 ) {
-  std::vector<double> u(my, 0.0);
+  std::array<double, my> u{};
   int j;
   for (int i = 0; i < my; i++) {
     j = iline[i];
-    if (j < 0)  // 0-indexed: j <= 0 means j == -1 (Fortran: j <= 0)
+    if (j < 0)
       u[i] = 0.0;
     else if (j == 0) u[i] = 0.0;
-    else u[i] = f[j - 1];  // Convert 1-based index from iline to 0-based
+    else u[i] = f[j - 1];
   }
   return u;
 }
@@ -950,31 +922,31 @@ std::vector<double> getg(
 //*  GRAM - compute the Gram matrix and R vector
 //* --------------------------------------------------------------------
 void gram(
-  std::vector<std::vector<double>> &gr, 
-  std::vector<int> &iline, 
-  std::vector<std::vector<int>> &indx, 
-  int iwrite, int my, int nelemn, 
-  int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, std::vector<double> &r, 
-  std::vector<double> &uprof, 
-  std::vector<double> &xc, double xprof, 
-  std::vector<double> &yc
+  std::array<double, my * my> &gr,
+  std::array<int, my> &iline,
+  std::array<int, n_points * 2> &indx,
+  int iwrite,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, my> &r,
+  std::array<double, my> &uprof,
+  std::array<double, n_points> &xc, double xprof,
+  std::array<double, n_points> &yc
 ) {
   constexpr std::array<double, 3> wt = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
   constexpr std::array<double, 3> yq_gauss = {-0.7745966692, 0.0, 0.7745966692};
 
-  for (int it = 0; it < static_cast<int>(r.size()); it++) {
+  for (int it = 0; it < my; it++) {
     r[it] = 0.0;
   }
 
-  for (int it = 0; it < static_cast<int>(gr.size()); it++) {
-    for (int j = 0; j < static_cast<int>(gr[it].size()); j++) {
-      gr[it][j] = 0.0;
+  for (int it = 0; it < my; it++) {
+    for (int j = 0; j < my; j++) {
+      gr[it * my + j] = 0.0;
     }
   }
   for (int it = 0; it < nelemn; it++) {
-    int k = node[it][0];
-    int kk = node[it][1];
+    int k = node[it * nnodes];
+    int kk = node[it * nnodes + 1];
 
     if ((std::abs(xc[k] - xprof) > 1.0e-4) or (std::abs(xc[kk] - xprof) > 1.0e-4))
       continue;
@@ -988,11 +960,11 @@ void gram(
       double uiqdpt = 0.0;
       for (int iq = 0; iq < nnodes; iq++) {
         if ((iq == 0) or (iq == 1) or (iq == 3)) {
-          auto [bb, bx, by] = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-          int ip = node[it][iq];
-          int iun = indx[ip][0];
+          auto [bb, bx, by] = qbf(x, y, it, iq, node, xc, yc);
+          int ip = node[it * nnodes + iq];
+          int iun = indx[ip * 2];
           if (0 < iun) {
-            int ii = igetl(iun, iline, my);
+            int ii = igetl(iun, iline);
             uiqdpt += bb * uprof[ii - 1];
           } else if (iun == -1) {
             double ubc = ubdry(1, yc[ip]);
@@ -1003,22 +975,22 @@ void gram(
 
       for (int iq = 0; iq < nnodes; iq++) {
         if ((iq == 0) or (iq == 1) or (iq == 3)) {
-          int ip = node[it][iq];
-          auto [bb, bx, by] = qbf(x, y, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-          int i_val = indx[ip][0];
+          int ip = node[it * nnodes + iq];
+          auto [bb, bx, by] = qbf(x, y, it, iq, node, xc, yc);
+          int i_val = indx[ip * 2];
           if (0 < i_val) {
-            int ii = igetl(i_val, iline, my);
+            int ii = igetl(i_val, iline);
             r[ii - 1] += bb * uiqdpt * ar;
             for (int iqq = 0; iqq < nnodes; iqq++) {
               if (iqq == 0 or iqq == 1 or iqq == 3) {
-                int ipp = node[it][iqq];
+                int ipp = node[it * nnodes + iqq];
                 auto [bbb, bbx_, bby_] = qbf(
-                  x, y, it, iqq, nelemn, nnodes, node, n_points, xc, yc
+                  x, y, it, iqq, node, xc, yc
                 );
-                int j_val = indx[ipp][0];
+                int j_val = indx[ipp * 2];
                 if (j_val != 0) {
-                  int jj = igetl(j_val, iline, my);
-                  gr[ii - 1][jj - 1] += bb * bbb * ar;
+                  int jj = igetl(j_val, iline);
+                  gr[(ii - 1) * my + (jj - 1)] += bb * bbb * ar;
                 }
               }
             }
@@ -1033,7 +1005,7 @@ void gram(
     std::println();
     for (int i = 0; i < my; i++) {
       for (int j = 0; j < my; j++) {
-        std::println("{} {} {}", i + 1, j + 1, gr[i][j]);
+        std::println("{} {} {}", i + 1, j + 1, gr[i * my + j]);
       }
     }
     std::println();
@@ -1112,15 +1084,14 @@ int idamax_v(int n, std::vector<double> &dx, int incx) {
   return idamax_val;
 }
 
-int idamax_m(int n, const std::vector<std::vector<double>>& abd, int col, int start_row, int incx) {
+int idamax_m(int n, const std::vector<double>& abd, int stride, int col, int start_row, int incx) {
   if (n < 1 || incx <= 0) return -1;
 
   int idamax_val = 0;
-  double dmax = std::abs(abd[start_row][col]);
+  double dmax = std::abs(abd[start_row * stride + col]);
   
-  // Recorremos desde start_row hasta start_row + n
   for (int i = 1; i < n; i++) {
-    double current_val = std::abs(abd[start_row + (i*incx)][col]);
+    double current_val = std::abs(abd[(start_row + (i * incx)) * stride + col]);
     if (current_val > dmax) {
       idamax_val = i;
       dmax = current_val;
@@ -1132,9 +1103,9 @@ int idamax_m(int n, const std::vector<std::vector<double>>& abd, int col, int st
 //* --------------------------------------------------------------------
 //*  IGETL - get the local unknown number along the profile line
 //* --------------------------------------------------------------------
-inline int igetl(int i, std::vector<int> &iline, int my) {
+inline int igetl(int i, const std::array<int, my> &iline) {
   for (int j = 0; j < my; j++) {
-    if (iline[j] == i) return j + 1; // 1-indexed
+    if (iline[j] == i) return j + 1;
   }
   return -1;
 }
@@ -1143,23 +1114,23 @@ inline int igetl(int i, std::vector<int> &iline, int my) {
 //*  LINSYS - solve the linearized Navier Stokes equation
 //* --------------------------------------------------------------------
 void linsys(
-  std::vector<std::vector<double>> &a, 
-  std::vector<double> &area,
+  std::vector<double> &a,
+  std::array<double, nelemn> &area,
   std::vector<double> &f, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
   int itype, int maxrow, int nband,
-  int nelemn, int neqn, int nlband,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad, int nrow,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi, double reynld,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  int neqn, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi, double reynld,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 ) {
   int ioff = (
     nlband + nlband + 1
-  );  // This is 1-indexed offset to main diagonal row in band storage
+  );
   double visc = 1.0 / reynld;
   int ip, ihor, iver, iprs;
   int ipp;
@@ -1172,13 +1143,13 @@ void linsys(
 
   for (int i = 0; i < nrow; i++) {
     for (int j = 0; j < neqn; j++) {
-      a[i][j] = 0.0;
+      a[i * neqn + j] = 0.0;
     }
   }
 
-  std::vector<double> un(2, 0.0);
-  std::vector<double> unx(2, 0.0);
-  std::vector<double> uny(2, 0.0);
+  std::array<double, 2> un{};
+  std::array<double, 2> unx{};
+  std::array<double, 2> uny{};
   double det, etax, etay, xix, xiy;
   double ar, yq, xq, bbl, bbbl, ubc, aij;
   double bb, bx, by;
@@ -1187,8 +1158,8 @@ void linsys(
     ar = area[it] / 3.0;
 
     for (int iquad = 0; iquad < nquad; iquad++) {
-      yq = ym[it][iquad];
-      xq = xm[it][iquad];
+      yq = ym[it * nquad + iquad];
+      xq = xm[it * nquad + iquad];
 
       det = 0.0;
       etax = 0.0;
@@ -1199,25 +1170,25 @@ void linsys(
 
       if (isotri[it] == 1) {
         std::tie(det, etax, etay, xix, xiy) = trans(
-          it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+          it, node, xc, xq, yc, yq
         );
         ar = det * area[it] / 3.0;
       }
 
       std::tie(un, unx, uny) = uval(
-        etax, etay, g, indx, isotri, it, nelemn,
-        neqn, nnodes, node, n_points, xc, xix,
+        etax, etay, g, indx, isotri, it,
+        neqn, node, xc, xix,
         xiy, xq, yc, yq
       );
 
       for (int iq = 0; iq < nnodes; iq++) {
-        ip = node[it][iq];
-        bb = phi[it][iquad][iq][0];
-        bx = phi[it][iquad][iq][1];
-        by = phi[it][iquad][iq][2];
-        bbl = psi[it][iquad][iq];
-        ihor = indx[ip][0];
-        iver = indx[ip][1];
+        ip = node[it * nnodes + iq];
+        bb = phi[phi_idx(it, iquad, iq, 0)];
+        bx = phi[phi_idx(it, iquad, iq, 1)];
+        by = phi[phi_idx(it, iquad, iq, 2)];
+        bbl = psi[psi_idx(it, iquad, iq)];
+        ihor = indx[ip * 2];
+        iver = indx[ip * 2 + 1];
         iprs = insc[ip];
 
         if (0 < ihor)
@@ -1227,19 +1198,19 @@ void linsys(
           f[iver - 1] += ar * bb * (un[0] * unx[1] + un[1] * uny[1]);
 
         for (int iqq = 0; iqq < nnodes; iqq++) {
-          ipp = node[it][iqq];
-          bbb = phi[it][iquad][iqq][0];
-          bbx = phi[it][iquad][iqq][1];
-          bby = phi[it][iquad][iqq][2];
-          bbbl = psi[it][iquad][iqq];
-          ju = indx[ipp][0];
-          jv = indx[ipp][1];
+          ipp = node[it * nnodes + iqq];
+          bbb = phi[phi_idx(it, iquad, iqq, 0)];
+          bbx = phi[phi_idx(it, iquad, iqq, 1)];
+          bby = phi[phi_idx(it, iquad, iqq, 2)];
+          bbbl = psi[psi_idx(it, iquad, iqq)];
+          ju = indx[ipp * 2];
+          jv = indx[ipp * 2 + 1];
           jp = insc[ipp];
 
           if (0 < ju) {
             if (0 < ihor) {
               iuse = ihor - ju + ioff;
-              a[iuse - 1][ju - 1] += ar * (
+              a[(iuse - 1) * neqn + (ju - 1)] += ar * (
                 visc * (by * bby + bx * bbx)
                 + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1])
               );
@@ -1247,12 +1218,12 @@ void linsys(
 
             if (0 < iver) {
               iuse = iver - ju + ioff;
-              a[iuse - 1][ju - 1] += ar * bb * bbb * unx[1];
+              a[(iuse - 1) * neqn + (ju - 1)] += ar * bb * bbb * unx[1];
             }
 
             if (0 < iprs) {
               iuse = iprs - ju + ioff;
-              a[iuse - 1][ju - 1] += ar * bbx * bbl;
+              a[(iuse - 1) * neqn + (ju - 1)] += ar * bbx * bbl;
             }
           } else if (ju == itype) {
             if (ju == -1)
@@ -1263,9 +1234,9 @@ void linsys(
                 indx,
                 ipp, iqq,
                 isotri,
-                it, 1, nelemn,
-                neqn, nnodes,
-                node, n_points,
+                it, 1,
+                neqn,
+                node,
                 xc, yc
               );
             }
@@ -1292,12 +1263,12 @@ void linsys(
           if (0 < jv) {
             if (0 < ihor) {
               iuse = ihor - jv + ioff;
-              a[iuse - 1][jv - 1] += ar * bb * bbb * uny[0];
+              a[(iuse - 1) * neqn + (jv - 1)] += ar * bb * bbb * uny[0];
             }
 
             if (0 < iver) {
               iuse = iver - jv + ioff;
-              a[iuse - 1][jv - 1] += ar * (
+              a[(iuse - 1) * neqn + (jv - 1)] += ar * (
                 visc * (by * bby + bx * bbx)
                 + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0])
               );
@@ -1305,7 +1276,7 @@ void linsys(
 
             if (0 < iprs) {
               iuse = iprs - jv + ioff;
-              a[iuse - 1][jv - 1] += ar * bby * bbl;
+              a[(iuse - 1) * neqn + (jv - 1)] += ar * bby * bbl;
             }
 
           } else if (jv == itype) {
@@ -1320,11 +1291,8 @@ void linsys(
                 isotri,
                 it,
                 2,
-                nelemn,
                 neqn,
-                nnodes,
                 node,
-                n_points,
                 xc,
                 yc
               );
@@ -1351,12 +1319,12 @@ void linsys(
           if (0 < jp) {
             if (0 < ihor) {
               iuse = ihor - jp + ioff;
-              a[iuse - 1][jp - 1] -= ar * bx * bbbl;
+              a[(iuse - 1) * neqn + (jp - 1)] -= ar * bx * bbbl;
             }
 
             if (0 < iver) {
               iuse = iver - jp + ioff;
-              a[iuse - 1][jp - 1] -= ar * by * bbbl;
+              a[(iuse - 1) * neqn + (jp - 1)] -= ar * by * bbbl;
             }
           }
         }
@@ -1368,25 +1336,18 @@ void linsys(
   int i, j;
   for (int j_1based = neqn - nlband; j_1based < neqn; j_1based++) {
     j = j_1based - 1;
-    i = neqn - j_1based + ioff;  // 1-indexed row in band storage
-    a[i - 1][j] = 0.0;
+    i = neqn - j_1based + ioff;
+    a[(i - 1) * neqn + j] = 0.0;
   }
-  a[ioff - 1][neqn - 1] = 1.0;  // nband == ioff, set diagonal of last eqn to 1
+  a[(ioff - 1) * neqn + (neqn - 1)] = 1.0;
 
-  // Save right-hand side in f, solve in-place
-  // DGBFA and DGBSL work on A in LINPACK band format
-
-  // We need to call dgbfa with the right parameters
-  // a is (maxrow, neqn) but the band part is (nrow, neqn)
-  // In LINPACK, LDA = maxrow, N = neqn, ML = nlband, MU = nlband
-  //ipvt = np.zeros(neqn, dtype=np.int32)
   std::vector<int> ipvt(neqn, 0);
   std::tie(info, ipvt) = dgbfa(a, maxrow, neqn, nlband, nlband, ipvt);
 
   if (info != 0) {
     std::println();
     std::println("LINSYS - fatal error!");
-    std::println("DGBFA returns INFO = {}", info+1);  // +1 for 1-indexed
+    std::println("DGBFA returns INFO = {}", info+1);
     std::exit(1);
   }
 
@@ -1399,20 +1360,20 @@ void linsys(
 //*  NSTOKE - solve Navier Stokes using Newton iteration
 //* --------------------------------------------------------------------
 int nstoke(
-  std::vector<std::vector<double>> &a,
-  std::vector<double> &area,
+  std::vector<double> &a,
+  std::array<double, nelemn> &area,
   std::vector<double> &f, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
-  int maxnew, int maxrow, int nband,
-  int nelemn, int neqn, int nlband,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad, int nrow, int numnew,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
+  int maxrow, int nband,
+  int neqn, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow, int numnew,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
   double reynld, double tolnew,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 ) {
   int itype, imax;
   double diff;
@@ -1428,9 +1389,9 @@ int nstoke(
       insc,
       isotri,
       itype, maxrow, nband,
-      nelemn, neqn, nlband,
-      nnodes, node,
-      n_points, nquad, nrow,
+      neqn, nlband,
+      node,
+      nrow,
       phi,
       psi, reynld,
       xc, xm,
@@ -1464,60 +1425,26 @@ int nstoke(
   return numnew;
 }
 
-//// --------------------------------------------------------------------
-////  PVAL - compute pressure table at all nodes
-//// --------------------------------------------------------------------
-//def pval(g, insc, _long, mx, my, nelemn, neqn, nnodes, node, n_points):
-//  press = np.zeros((mx, my), dtype=np.float64)
-//
-//  for it in range(nelemn):
-//    for iq in range(3):
-//      ip = node[it, iq]
-//      ivar = insc[ip]
-//      if _long:
-//        i = (ip) // my
-//        j = (ip) % my
-//      else:
-//        i = (ip) % mx
-//        j = (ip) // mx
-//
-//      if 0 < ivar:
-//        press[i, j] = g[ivar - 1]
-//
-//  for i in range(1, mx - 1, 2):
-//    for j in range(0, my, 2):
-//      press[i, j] = 0.5 * (press[i - 1, j] + press[i + 1, j])
-//
-//  for j in range(1, my - 1, 2):
-//    for i in range(0, mx, 2):
-//      press[i, j] = 0.5 * (press[i, j - 1] + press[i, j + 1])
-//
-//  for j in range(1, my - 1, 2):
-//    for i in range(1, mx - 1, 2):
-//      press[i, j] = 0.5 * (press[i - 1, j - 1] + press[i + 1, j + 1])
-//
-//  return press
-
 //* --------------------------------------------------------------------
 //*  QBF - evaluate quadratic basis functions
 //* --------------------------------------------------------------------
 std::tuple<double, double, double> qbf(
-  double xq, double yq, int it, 
-  int inn, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, int n_points, 
-  const std::vector<double> &xc, const std::vector<double> &yc
+  double xq, double yq, int it,
+  int inn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, const std::array<double, n_points> &yc
 ) {
   int in1, in2, in3, i1, i2, i3, inn_local;
   int j1, j2, j3;
   double d, c, t, s, bb, bx, by;
 
-  if (inn <= 2) {  // 0-indexed: in=0,1,2 corresponds to Fortran in=1,2,3
+  if (inn <= 2) {
     in1 = inn;
     in2 = (inn + 1) % 3;
     in3 = (inn + 2) % 3;
-    i1 = node[it][in1];
-    i2 = node[it][in2];
-    i3 = node[it][in3];
+    i1 = node[it * nnodes + in1];
+    i2 = node[it * nnodes + in2];
+    i3 = node[it * nnodes + in3];
     d = (xc[i2] - xc[i1]) * (yc[i3] - yc[i1]) - (xc[i3] - xc[i1]) * (yc[i2] - yc[i1]);
     t = (
       1.0 + ((yc[i2] - yc[i3]) * (xq - xc[i1]) + (xc[i3] - xc[i2]) * (yq - yc[i1])) / d
@@ -1530,9 +1457,9 @@ std::tuple<double, double, double> qbf(
     in1 = inn_local;
     in2 = (inn_local + 1) % 3;
     in3 = (inn_local + 2) % 3;
-    i1 = node[it][in1];
-    i2 = node[it][in2];
-    i3 = node[it][in3];
+    i1 = node[it * nnodes + in1];
+    i2 = node[it * nnodes + in2];
+    i3 = node[it * nnodes + in3];
     j1 = i2;
     j2 = i3;
     j3 = i1;
@@ -1555,7 +1482,6 @@ std::tuple<double, double, double> qbf(
 //*  REFBSP - evaluate linear basis functions in a reference triangle
 //* --------------------------------------------------------------------
 inline double refbsp(double xq, double yq, int iq){
-  // 0-indexed: iq=0 -> psi1, iq=1 -> psi2, iq=2 -> psi3
   if (iq == 0)
     return 1.0 - xq;
   else if (iq == 1)
@@ -1573,7 +1499,6 @@ std::tuple<double, double, double> refqbf(
   double etax, double etay, 
   double xix, double xiy
 ) {
-  // 0-indexed: inn=0..5 corresponds to Fortran in=1..6
   double bb, tbx, tby, bx, by;
   if (inn == 0) {
     bb = 1.0 - 3.0 * x + 2.0 * x * x;
@@ -1614,17 +1539,16 @@ std::tuple<double, double, double> refqbf(
 //*  RESID - compute the residual
 //* --------------------------------------------------------------------
 void resid(
-  std::vector<double> &area, std::vector<double> &g,
-  std::vector<std::vector<int>> &indx,
-  std::vector<int> &insc, std::vector<int> &isotri,
-  int iwrite, int nelemn, int neqn,
-  int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad,
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi,
-  std::vector<std::vector<std::vector<double>>> &psi, 
-  std::vector<double> &res, double reynld, 
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm, 
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, nelemn> &area, std::vector<double> &g,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, std::array<int, nelemn> &isotri,
+  int iwrite, int neqn,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
+  std::vector<double> &res, double reynld,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 ) {
   int itype = -1;
   double visc = 1.0 / reynld;
@@ -1638,16 +1562,16 @@ void resid(
   int ip, iprs, ihor, iver, ipp, ju, jv, jp;
   double bb, bx, by, bbl, bbb, bbx, bby, bbbl;
 
-  std::vector<double> un(2, 0.0);
-  std::vector<double> unx(2, 0.0);
-  std::vector<double> uny(2, 0.0);
+  std::array<double, 2> un{};
+  std::array<double, 2> unx{};
+  std::array<double, 2> uny{};
 
   for (int it = 0; it < nelemn; it++) {
     ar = area[it] / 3.0;
 
     for (int iquad = 0; iquad < nquad; iquad++) {
-      yq = ym[it][iquad];
-      xq = xm[it][iquad];
+      yq = ym[it * nquad + iquad];
+      xq = xm[it * nquad + iquad];
 
       det = 0.0;
       etax = 0.0;
@@ -1657,26 +1581,26 @@ void resid(
 
       if (isotri[it] == 1) {
         std::tie(det, etax, etay, xix, xiy) = trans(
-          it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+          it, node, xc, xq, yc, yq
         );
         ar = det * area[it] / 3.0;
       }
 
       std::tie(un, unx, uny) = uval(
         etax, etay, g, indx, isotri, it,
-        nelemn, neqn, nnodes, node, n_points, xc,
+        neqn, node, xc,
         xix, xiy, xq, yc, yq
       );
 
       for (int iq = 0; iq < nnodes; iq++) {
-        ip = node[it][iq];
-        bb = phi[it][iquad][iq][0];
-        bx = phi[it][iquad][iq][1];
-        by = phi[it][iquad][iq][2];
-        bbl = psi[it][iquad][iq];
+        ip = node[it * nnodes + iq];
+        bb = phi[phi_idx(it, iquad, iq, 0)];
+        bx = phi[phi_idx(it, iquad, iq, 1)];
+        by = phi[phi_idx(it, iquad, iq, 2)];
+        bbl = psi[psi_idx(it, iquad, iq)];
         iprs = insc[ip];
-        ihor = indx[ip][0];
-        iver = indx[ip][1];
+        ihor = indx[ip * 2];
+        iver = indx[ip * 2 + 1];
 
         if (0 < ihor)
           res[ihor - 1] -= ar * bb * (un[0] * unx[0] + un[1] * uny[0]);
@@ -1685,13 +1609,13 @@ void resid(
           res[iver - 1] -= ar * bb * (un[0] * unx[1] + un[1] * uny[1]);
 
         for (int iqq = 0; iqq < nnodes; iqq++) {
-          ipp = node[it][iqq];
-          bbb = phi[it][iquad][iqq][0];
-          bbx = phi[it][iquad][iqq][1];
-          bby = phi[it][iquad][iqq][2];
-          bbbl = psi[it][iquad][iqq];
-          ju = indx[ipp][0];
-          jv = indx[ipp][1];
+          ipp = node[it * nnodes + iqq];
+          bbb = phi[phi_idx(it, iquad, iqq, 0)];
+          bbx = phi[phi_idx(it, iquad, iqq, 1)];
+          bby = phi[phi_idx(it, iquad, iqq, 2)];
+          bbbl = psi[psi_idx(it, iquad, iqq)];
+          ju = indx[ipp * 2];
+          jv = indx[ipp * 2 + 1];
           jp = insc[ipp];
 
           if (0 < ju) {
@@ -1716,7 +1640,7 @@ void resid(
             if (ju == -2) {
               ubc = ubump(
                 g, indx, ipp, iqq, isotri, it, 1,
-                nelemn, neqn, nnodes, node, n_points,
+                neqn, node,
                 xc, yc
               );
             } else if (ju == -1)
@@ -1762,7 +1686,7 @@ void resid(
             if (jv == -2) {
               ubc = ubump(
                 g, indx, ipp, iqq, isotri, it, 2,
-                nelemn, neqn, nnodes, node, n_points, 
+                neqn, node,
                 xc, yc
               );
             } else if (jv == -1) ubc = ubdry(2, yc[ipp]);
@@ -1830,7 +1754,7 @@ void resid(
     std::println();
     int idx = 0;
     for (int j = 0; j < n_points; j++) {
-      if (0 < indx[j][0]) {
+      if (0 < indx[j * 2]) {
         if (std::abs(res[idx]) <= 1.0e-3)
           std::println(" U {} {} {}", idx+1, j+1, res[idx]);
         else
@@ -1838,7 +1762,7 @@ void resid(
         idx += 1;
       }
 
-      if (0 < indx[j][1]) {
+      if (0 < indx[j * 2 + 1]) {
         if (std::abs(res[idx]) <= 1.0e-3)
           std::println(" V {} {} {}", idx+1, j+1, res[idx]);
         else
@@ -1862,31 +1786,31 @@ void resid(
 //*  SETBAN - compute the half band width
 //* --------------------------------------------------------------------
 std::tuple<int, int, int> setban(
-  std::vector<std::vector<int>> &indx, 
-  std::vector<int> &insc, int maxrow, 
-  int nband, int nelemn, int nlband, 
-  int nnodes, std::vector<std::vector<int>> &node, 
-  int n_points, int nrow
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc, int maxrow,
+  int nband, int nlband,
+  std::array<int, nelemn * nnodes> &node,
+  int nrow
 ) {
   int ip, i_val, ipp, j_val;
   nlband = 0;
 
   for (int it = 0; it < nelemn; it++) {
     for (int iq = 0; iq < nnodes; iq++) {
-      ip = node[it][iq];
+      ip = node[it * nnodes + iq];
       for (int iuk = 0; iuk < 3; iuk++) {
         if (iuk == 2)
           i_val = insc[ip];
         else
-          i_val = indx[ip][iuk];
+          i_val = indx[ip * 2 + iuk];
         if (0 < i_val) {
           for (int iqq = 0; iqq < nnodes; iqq++) {
-            ipp = node[it][iqq];
+            ipp = node[it * nnodes + iqq];
             for (int iukk = 0; iukk < 3; iukk++) {
               if (iukk == 2)
                 j_val = insc[ipp];
               else
-                j_val = indx[ipp][iukk];
+                j_val = indx[ipp * 2 + iukk];
               if (0 < j_val)
                 nlband = std::max(nlband, j_val - i_val);
             }
@@ -1909,6 +1833,7 @@ std::tuple<int, int, int> setban(
   if (maxrow < nrow) {
     std::println("SETBAN - NROW is too large!");
     std::println("The maximum allowed is {}", maxrow);
+    std::println("This problem requires NROW = {}", nrow);
     std::exit(1);
   }
 
@@ -1919,14 +1844,14 @@ std::tuple<int, int, int> setban(
 //*  SETBAS - evaluate basis functions at each integration point
 //* --------------------------------------------------------------------
 void setbas(
-  const std::vector<int> &isotri, int nelemn, int nnodes, 
-  std::vector<std::vector<int>> &node, int n_points, int nquad, 
-  std::vector<std::vector<std::vector<std::vector<double>>>> &phi, 
-  std::vector<std::vector<std::vector<double>>> &psi, 
-  std::vector<double> &xc, 
-  std::vector<std::vector<double>> &xm, 
-  std::vector<double> &yc, 
-  std::vector<std::vector<double>> &ym
+  const std::array<int, nelemn> &isotri,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, nelemn * nquad * nnodes * 3> &phi,
+  std::array<double, nelemn * nquad * nnodes> &psi,
+  std::array<double, n_points> &xc,
+  std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc,
+  std::array<double, nelemn * nquad> &ym
 ) {
   double xq, yq;
   double det, etax, etay, xix, xiy;
@@ -1934,25 +1859,25 @@ void setbas(
 
   for (int it = 0; it < nelemn; it++) {
     for (int j = 0; j < nquad; j++) {
-      xq = xm[it][j];
-      yq = ym[it][j];
+      xq = xm[it * nquad + j];
+      yq = ym[it * nquad + j];
       std::tie(det, etax, etay, xix, xiy) = trans(
-        it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+        it, node, xc, xq, yc, yq
       );
 
       for (int iq = 0; iq < nnodes; iq++) {
         if (isotri[it] == 0) {
-          psi[it][j][iq] = bsp(
-            it, iq, 0, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+          psi[psi_idx(it, j, iq)] = bsp(
+            it, iq, 0, node, xc, xq, yc, yq
           );
-          std::tie(bb, bx, by) = qbf(xq, yq, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+          std::tie(bb, bx, by) = qbf(xq, yq, it, iq, node, xc, yc);
         } else {
           std::tie(bb, bx, by) = refqbf(xq, yq, iq, etax, etay, xix, xiy);
-          psi[it][j][iq] = refbsp(xq, yq, iq);
+          psi[psi_idx(it, j, iq)] = refbsp(xq, yq, iq);
         }
-        phi[it][j][iq][0] = bb;
-        phi[it][j][iq][1] = bx;
-        phi[it][j][iq][2] = by;
+        phi[phi_idx(it, j, iq, 0)] = bb;
+        phi[phi_idx(it, j, iq, 1)] = bx;
+        phi[phi_idx(it, j, iq, 2)] = by;
       }
     }
   }
@@ -1962,15 +1887,13 @@ void setbas(
 //*  SETGRD - set up the geometric grid
 //* --------------------------------------------------------------------
 std::tuple<bool, int> setgrd(
-  int ibump, 
-  std::vector<std::vector<int>> &indx, 
-  std::vector<int> &insc,
-  std::vector<int> &isotri, 
+  int ibump,
+  std::array<int, n_points * 2> &indx,
+  std::array<int, n_points> &insc,
+  std::array<int, nelemn> &isotri,
+  std::array<int, nelemn * nnodes> &node,
   int iwrite, bool _long, int maxeqn,
-  int mx, int my, int nelemn,
-  int neqn, int nnodes,
-  std::vector<std::vector<int>> &node, 
-  int n_points, int nx, int ny,
+  int neqn,
   double xbleft, double xbrite, double xlngth
 ) {
   std::println();
@@ -1998,7 +1921,7 @@ std::tuple<bool, int> setgrd(
     std::exit(EXIT_FAILURE);
   }
 
-  int nbleft = round(xbleft * (mx - 1) / xlngth);  // 0-indexed
+  int nbleft = round(xbleft * (mx - 1) / xlngth);
   int nbrite = round(xbrite * (mx - 1) / xlngth);
   std::println("Bump extends from {} at node {}", xbleft, nbleft + 1);
   std::println("               to {} at node {}", xbrite, nbrite + 1);
@@ -2024,12 +1947,12 @@ std::tuple<bool, int> setgrd(
         ip1 = ip + my;
         ip2 = ip + my + my;
 
-        node[ielemn][0] = ip;
-        node[ielemn][1] = ip + 2;
-        node[ielemn][2] = ip2 + 2;
-        node[ielemn][3] = ip + 1;
-        node[ielemn][4] = ip1 + 2;
-        node[ielemn][5] = ip1 + 1;
+        node[ielemn * nnodes] = ip;
+        node[ielemn * nnodes + 1] = ip + 2;
+        node[ielemn * nnodes + 2] = ip2 + 2;
+        node[ielemn * nnodes + 3] = ip + 1;
+        node[ielemn * nnodes + 4] = ip1 + 2;
+        node[ielemn * nnodes + 5] = ip1 + 1;
 
         if (ibump == 0)
           isotri[ielemn] = 0;
@@ -2042,12 +1965,12 @@ std::tuple<bool, int> setgrd(
 
         ielemn += 1;
 
-        node[ielemn][0] = ip;
-        node[ielemn][1] = ip2 + 2;
-        node[ielemn][2] = ip2;
-        node[ielemn][3] = ip1 + 1;
-        node[ielemn][4] = ip2 + 1;
-        node[ielemn][5] = ip1;
+        node[ielemn * nnodes] = ip;
+        node[ielemn * nnodes + 1] = ip2 + 2;
+        node[ielemn * nnodes + 2] = ip2;
+        node[ielemn * nnodes + 3] = ip1 + 1;
+        node[ielemn * nnodes + 4] = ip2 + 1;
+        node[ielemn * nnodes + 5] = ip1;
 
         if (ibump == 0)
           isotri[ielemn] = 0;
@@ -2063,12 +1986,12 @@ std::tuple<bool, int> setgrd(
         ip1 = ip + mx;
         ip2 = ip + mx + mx;
 
-        node[ielemn][0] = ip;
-        node[ielemn][1] = ip2;
-        node[ielemn][2] = ip2 + 2;
-        node[ielemn][3] = ip1;
-        node[ielemn][4] = ip2 + 1;
-        node[ielemn][5] = ip1 + 1;
+        node[ielemn * nnodes] = ip;
+        node[ielemn * nnodes + 1] = ip2;
+        node[ielemn * nnodes + 2] = ip2 + 2;
+        node[ielemn * nnodes + 3] = ip1;
+        node[ielemn * nnodes + 4] = ip2 + 1;
+        node[ielemn * nnodes + 5] = ip1 + 1;
 
         if (ibump == 0)
           isotri[ielemn] = 0;
@@ -2081,12 +2004,12 @@ std::tuple<bool, int> setgrd(
 
         ielemn += 1;
 
-        node[ielemn][0] = ip;
-        node[ielemn][1] = ip2 + 2;
-        node[ielemn][2] = ip + 2;
-        node[ielemn][3] = ip1 + 1;
-        node[ielemn][4] = ip1 + 2;
-        node[ielemn][5] = ip + 1;
+        node[ielemn * nnodes] = ip;
+        node[ielemn * nnodes + 1] = ip2 + 2;
+        node[ielemn * nnodes + 2] = ip + 2;
+        node[ielemn * nnodes + 3] = ip1 + 1;
+        node[ielemn * nnodes + 4] = ip1 + 2;
+        node[ielemn * nnodes + 5] = ip + 1;
 
         if (ibump == 0)
           isotri[ielemn] = 0;
@@ -2102,22 +2025,22 @@ std::tuple<bool, int> setgrd(
     }
 
     if (ic == 0 and 0 < jc and jc < my - 1) {
-      indx[ip][0] = -1;
-      indx[ip][1] = -1;
+      indx[ip * 2] = -1;
+      indx[ip * 2 + 1] = -1;
     } else if (ic == mx - 1 and 0 < jc and jc < my - 1) {
       neqn += 1;
-      indx[ip][0] = neqn;
-      indx[ip][1] = 0;
+      indx[ip * 2] = neqn;
+      indx[ip * 2 + 1] = 0;
     } else if (jc == 0 and ielemn > 0 and isotri[ielemn - 1] == 1) {
-      indx[ip][0] = -2;
-      indx[ip][1] = -2;
+      indx[ip * 2] = -2;
+      indx[ip * 2 + 1] = -2;
     } else if (ic == 0 or ic == mx - 1 or jc == 0 or jc == my - 1) {
-      indx[ip][0] = 0;
-      indx[ip][1] = 0;
+      indx[ip * 2] = 0;
+      indx[ip * 2 + 1] = 0;
     } else {
       neqn += 2;
-      indx[ip][0] = neqn - 1;
-      indx[ip][1] = neqn;
+      indx[ip * 2] = neqn - 1;
+      indx[ip * 2 + 1] = neqn;
     }
     
     if (jcnt == 1 and icnt == 1) {
@@ -2133,7 +2056,7 @@ std::tuple<bool, int> setgrd(
     for (int i = 0; i < n_points; i++) {
       std::println(
         "{}\t{}\t{}\t{}", 
-        i+1, indx[i][0], indx[i][1], insc[i]
+        i+1, indx[i * 2], indx[i * 2 + 1], insc[i]
       );
     }
     std::println();
@@ -2149,7 +2072,7 @@ std::tuple<bool, int> setgrd(
     for (int it = 0; it < nelemn; it++){
       std::print("{}\t", it+1);
       for (int i = 0; i < 6; i++) {
-        std::print("{}\t", node[it][i]+1);
+        std::print("{}\t", node[it * nnodes + i]+1);
       }
       std::println();
     }
@@ -2171,10 +2094,9 @@ std::tuple<bool, int> setgrd(
 //*  SETLIN - determine unknown numbers along the profile line
 //* --------------------------------------------------------------------
 void setlin(
-  std::vector<int> &iline, 
-  std::vector<std::vector<int>> &indx, 
-  int iwrite, bool _long, int mx, int my, 
-  int n_points, int nx, int ny, 
+  std::array<int, my> &iline,
+  std::array<int, n_points * 2> &indx,
+  int iwrite, bool _long,
   double xlngth, double xprof
 ) {
   int itemp, nodex0, ip;
@@ -2197,7 +2119,7 @@ void setlin(
       ip = nodex0 + i;
     else
       ip = nodex0 + mx * i;
-    iline[i] = indx[ip][0];
+    iline[i] = indx[ip * 2];
   }
 
   if (1 <= iwrite) {
@@ -2217,16 +2139,15 @@ void setlin(
 //*  SETQUD - set midpoint quadrature rule information
 //* --------------------------------------------------------------------
 void setqud(
-  std::vector<double> &area, std::vector<int> &isotri, int iwrite,
-  int nelemn, int nnodes, std::vector<std::vector<int>> &node,
-  int n_points, int nquad,
-  std::vector<double> &xc, std::vector<std::vector<double>> &xm,
-  std::vector<double> &yc, std::vector<std::vector<double>> &ym
+  std::array<double, nelemn> &area, std::array<int, nelemn> &isotri, int iwrite,
+  std::array<int, nelemn * nnodes> &node,
+  std::array<double, n_points> &xc, std::array<double, nelemn * nquad> &xm,
+  std::array<double, n_points> &yc, std::array<double, nelemn * nquad> &ym
 ) {
   for (int it = 0; it < nelemn; it++) {
-    int ip1 = node[it][0];
-    int ip2 = node[it][1];
-    int ip3 = node[it][2];
+    int ip1 = node[it * nnodes];
+    int ip2 = node[it * nnodes + 1];
+    int ip3 = node[it * nnodes + 2];
     double x1 = xc[ip1];
     double x2 = xc[ip2];
     double x3 = xc[ip3];
@@ -2235,22 +2156,22 @@ void setqud(
     double y3 = yc[ip3];
 
     if (isotri[it] == 0) {
-      xm[it][0] = 0.5 * (x1 + x2);
-      xm[it][1] = 0.5 * (x2 + x3);
-      xm[it][2] = 0.5 * (x3 + x1);
-      ym[it][0] = 0.5 * (y1 + y2);
-      ym[it][1] = 0.5 * (y2 + y3);
-      ym[it][2] = 0.5 * (y3 + y1);
+      xm[it * nquad] = 0.5 * (x1 + x2);
+      xm[it * nquad + 1] = 0.5 * (x2 + x3);
+      xm[it * nquad + 2] = 0.5 * (x3 + x1);
+      ym[it * nquad] = 0.5 * (y1 + y2);
+      ym[it * nquad + 1] = 0.5 * (y2 + y3);
+      ym[it * nquad + 2] = 0.5 * (y3 + y1);
       area[it] = 0.5 * std::abs(
         (y1 + y2) * (x2 - x1) + (y2 + y3) * (x3 - x2) + (y3 + y1) * (x1 - x3)
       );
     } else {
-      xm[it][0] = 0.5;
-      ym[it][0] = 0.5;
-      xm[it][1] = 1.0;
-      ym[it][1] = 0.5;
-      xm[it][2] = 0.5;
-      ym[it][2] = 0.0;
+      xm[it * nquad] = 0.5;
+      ym[it * nquad] = 0.5;
+      xm[it * nquad + 1] = 1.0;
+      ym[it * nquad + 1] = 0.5;
+      xm[it * nquad + 2] = 0.5;
+      ym[it * nquad + 2] = 0.0;
       area[it] = 0.5;
     }
   }
@@ -2260,8 +2181,8 @@ void setqud(
     std::println();
     for (int i = 0; i < nelemn; i++) {
       std::println("{}\t{}", i + 1, area[i]);
-      for (int j =0; j < nquad; j++) {
-        std::println("{}\t{}\t{}\t{}", i + 1, j + 1, xm[i][j], ym[i][j]);
+      for (int j = 0; j < nquad; j++) {
+        std::println("{}\t{}\t{}\t{}", i + 1, j + 1, xm[i * nquad + j], ym[i * nquad + j]);
       }
     }
   }
@@ -2271,10 +2192,9 @@ void setqud(
 //*  SETXY - set the grid coordinates based on the parameter value
 //* --------------------------------------------------------------------
 void setxy(
-  int iwrite, bool _long, int mx, int my, int n_points, 
-  int nx, int ny, 
-  std::vector<double> &xc, double xlngth, 
-  std::vector<double> &yc, double ylngth, double ypert
+  int iwrite, bool _long,
+  std::array<double, n_points> &xc, double xlngth,
+  std::array<double, n_points> &yc, double ylngth, double ypert
 ) {
   for (int ip = 0; ip < n_points; ip++){
     int ic, jc;
@@ -2310,8 +2230,6 @@ void setxy(
 void timestamp()
 {
   auto ahora = std::chrono::system_clock::now();
-  //? Formato: Año-Mes-Dia Hora:Minuto:Segundo
-  //? %F -> %Y-%m-%d, %T -> %H:%M:%S
   std::println("{0:%Y-%m-%d %H:%M:%S}", ahora);
 }
 
@@ -2319,18 +2237,17 @@ void timestamp()
 //*  TRANS - calculate the element transformation mapping
 //* --------------------------------------------------------------------
 std::tuple<double, double, double, double, double> trans(
-  int it, int nelemn, int nnodes, 
-  const std::vector<std::vector<int>> &node, 
-  int n_points, 
-  const std::vector<double> &xc, double xq, 
-  const std::vector<double> &yc, double yq
+  int it,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, double xq,
+  const std::array<double, n_points> &yc, double yq
 ) {
-  int i1 = node[it][0];
-  int i2 = node[it][1];
-  int i3 = node[it][2];
-  int i4 = node[it][3];
-  int i5 = node[it][4];
-  int i6 = node[it][5];
+  int i1 = node[it * nnodes];
+  int i2 = node[it * nnodes + 1];
+  int i3 = node[it * nnodes + 2];
+  int i4 = node[it * nnodes + 3];
+  int i5 = node[it * nnodes + 4];
+  int i6 = node[it * nnodes + 5];
 
   double x1 = xc[i1];
   double y1 = yc[i1];
@@ -2399,13 +2316,13 @@ inline double ubdry(int iuk, double yy) {
 //* --------------------------------------------------------------------
 double ubump(
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
+  const std::array<int, n_points * 2> &indx,
   int ip, int iqq,
-  const std::vector<int> &isotri,
-  int it, int iukk, int nelemn,
-  int neqn, int nnodes,
-  const std::vector<std::vector<int>> &node, int n_points,
-  const std::vector<double> &xc, const std::vector<double> &yc
+  const std::array<int, nelemn> &isotri,
+  int it, int iukk,
+  int neqn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc, const std::array<double, n_points> &yc
 ) {
   double det = 1.0;
   double etax = 0.0;
@@ -2440,13 +2357,13 @@ double ubump(
     }
     
     std::tie(det, etax, etay, xix, xiy) = trans(
-      it, nelemn, nnodes, node, n_points, xc, xq, yc, yq
+      it, node, xc, xq, yc, yq
     );
   }
 
   auto [un, unx, uny] = _ubump_uval(
-    g, indx, isotri, it, nelemn, 
-    neqn, nnodes, node, n_points,
+    g, indx, isotri, it,
+    neqn, node,
     xc, xix, xiy, xq, yc, yq, 
     det, etax, etay
   );
@@ -2460,20 +2377,20 @@ double ubump(
     std::exit(1);
   }
 }
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump_uval(
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> _ubump_uval(
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
-  const std::vector<int> &isotri,
-  int it, int nelemn, int neqn, int nnodes,
-  const std::vector<std::vector<int>> &node,
-  int n_points, const std::vector<double> &xc,
+  const std::array<int, n_points * 2> &indx,
+  const std::array<int, nelemn> &isotri,
+  int it, int neqn,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc,
   double xix, double xiy, double xq,
-  const std::vector<double> &yc,
+  const std::array<double, n_points> &yc,
   double yq, double det, double etax, double etay
 ) {
-  std::vector<double> un(2, 0.0);
-  std::vector<double> unx(2, 0.0);
-  std::vector<double> uny(2, 0.0);
+  std::array<double, 2> un{};
+  std::array<double, 2> unx{};
+  std::array<double, 2> uny{};
   
   double bb, bx, by, ubc;
 
@@ -2481,11 +2398,11 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump
     if (isotri[it] == 1)
       std::tie(bb, bx, by) = refqbf(xq, yq, iq, etax, etay, xix, xiy);
     else
-      std::tie(bb, bx, by) = qbf(xq, yq, it, iq, nelemn, nnodes, node, n_points, xc, yc);
-    int ip_local = node[it][iq];
+      std::tie(bb, bx, by) = qbf(xq, yq, it, iq, node, xc, yc);
+    int ip_local = node[it * nnodes + iq];
 
     for (int iuk = 0; iuk < 2; iuk++) {
-      int iun = indx[ip_local][iuk];
+      int iun = indx[ip_local * 2 + iuk];
       if (0 < iun) {
         un[iuk] += bb * g[iun - 1];
         unx[iuk] += bx * g[iun - 1];
@@ -2505,40 +2422,37 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> _ubump
 //* --------------------------------------------------------------------
 //*  UVAL - evaluate velocities at a given quadrature point
 //* --------------------------------------------------------------------
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> uval(
   double etax,
   double etay,
   const std::vector<double> &g,
-  const std::vector<std::vector<int>> &indx,
-  const std::vector<int> &isotri,
+  const std::array<int, n_points * 2> &indx,
+  const std::array<int, nelemn> &isotri,
   int it,
-  int nelemn,
   int neqn,
-  int nnodes,
-  const std::vector<std::vector<int>> &node,
-  int n_points,
-  const std::vector<double> &xc,
+  const std::array<int, nelemn * nnodes> &node,
+  const std::array<double, n_points> &xc,
   double xix,
   double xiy,
   double xq,
-  const std::vector<double> &yc,
+  const std::array<double, n_points> &yc,
   double yq
 ) {
-  std::vector<double> un(2, 0.0);
-  std::vector<double> unx(2, 0.0);
-  std::vector<double> uny(2, 0.0);
+  std::array<double, 2> un{};
+  std::array<double, 2> unx{};
+  std::array<double, 2> uny{};
   double bb, bx, by, ubc;
 
   for (int iq = 0; iq < nnodes; iq++) {
     if (isotri[it] == 1)
       std::tie(bb, bx, by) = refqbf(xq, yq, iq, etax, etay, xix, xiy);
     else
-      std::tie(bb, bx, by) = qbf(xq, yq, it, iq, nelemn, nnodes, node, n_points, xc, yc);
+      std::tie(bb, bx, by) = qbf(xq, yq, it, iq, node, xc, yc);
     
-    int ip_local = node[it][iq];
+    int ip_local = node[it * nnodes + iq];
 
     for (int iuk = 0; iuk < 2; iuk++) {
-      int iun = indx[ip_local][iuk];
+      int iun = indx[ip_local * 2 + iuk];
       if (0 < iun) {
         un[iuk] += bb * g[iun - 1];
         unx[iuk] += bx * g[iun - 1];
@@ -2560,25 +2474,23 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> uval(
 //* --------------------------------------------------------------------
 void uv_write(
   const std::vector<double>& f, 
-  const std::vector<std::vector<int>>& indx, 
+  const std::array<int, n_points * 2>& indx, 
   std::ofstream& uv_file_obj, 
-  int neqn, int n_points, 
-  const std::vector<double>& yc
+  int neqn,
+  const std::array<double, n_points>& yc
 ) {
   
   uv_file_obj << std::scientific << std::setprecision(6);
   double u, v;
 
   for (int ip = 0; ip < n_points; ++ip) {
-    // Lógica para 'u'
-    int k_u = indx[ip][0];
+    int k_u = indx[ip * 2];
 
     if (k_u < 0) u = ubdry(1, yc[ip]);
     else if (k_u == 0) u = 0.0;
     else u = f[k_u - 1];
 
-    // Lógica para 'v'
-    int k_v = indx[ip][1];
+    int k_v = indx[ip * 2 + 1];
 
     if (k_v < 0) v = ubdry(2, yc[ip]);
     else if (k_v == 0) v = 0.0;
@@ -2593,13 +2505,12 @@ void uv_write(
 //*  XY_WRITE - write node coordinate data
 //* --------------------------------------------------------------------
 void xy_write(
-  std::ofstream& xy_file_obj, int n_points, 
-  std::vector<double>& xc, std::vector<double>& yc
+  std::ofstream& xy_file_obj,
+  std::array<double, n_points>& xc, std::array<double, n_points>& yc
 ) {
   xy_file_obj << std::scientific << std::setprecision(6);
   
   for (int ip = 0; ip < n_points; ++ip) {
-    // El formato :14.6e en Python se traduce así:
     xy_file_obj << "  " << std::setw(14) << xc[ip] 
                 << "  " << std::setw(14) << yc[ip] << "\n";
   }
