@@ -1,14 +1,19 @@
+#![allow(dead_code)]
+
 use chrono::Local;
 
 use crate::program::bump_struct;
 
+const NNODES: usize = 6;
+const NQUAD: usize = 3;
+
 #[inline(always)]
-pub fn phi_idx(it: usize, iquad: usize, iq: usize, k: usize, nquad: usize, nnodes: usize) -> usize {
-    ((it * nquad + iquad) * nnodes + iq) * 3 + k
+pub fn phi_idx(it: usize, iquad: usize, iq: usize, k: usize) -> usize {
+    ((it * NQUAD + iquad) * NNODES + iq) * 3 + k
 }
 #[inline(always)]
-pub fn psi_idx(it: usize, iquad: usize, iq: usize, nquad: usize, nnodes: usize) -> usize {
-    (it * nquad + iquad) * nnodes + iq
+pub fn psi_idx(it: usize, iquad: usize, iq: usize) -> usize {
+    (it * NQUAD + iquad) * NNODES + iq
 }
 
 //* --------------------------------------------------------------------
@@ -18,20 +23,19 @@ pub fn bsp(
     it: usize,
     iq: usize,
     id: usize,
-    node: &Vec<usize>,
-    xc: &Vec<f64>,
+    node: &[usize],
+    xc: &[f64],
     xq: f64,
-    yc: &Vec<f64>,
+    yc: &[f64],
     yq: f64,
-    nnodes: &usize,
 ) -> f64 {
     let l1 = iq;
     let l2 = i4_wrap(iq + 1, 0, 2);
     let l3 = i4_wrap(iq + 2, 0, 2);
 
-    let g1: usize = node[it * nnodes + l1];
-    let g2: usize = node[it * nnodes + l2];
-    let g3: usize = node[it * nnodes + l3];
+    let g1: usize = node[it * NNODES + l1];
+    let g2: usize = node[it * NNODES + l2];
+    let g3: usize = node[it * NNODES + l3];
 
     let d: f64 = (xc[g2] - xc[g1]) * (yc[g3] - yc[g1]) - (xc[g3] - xc[g1]) * (yc[g2] - yc[g1]);
 
@@ -54,6 +58,7 @@ pub fn bsp(
 //* --------------------------------------------------------------------
 //*  DAXPY - constant times a vector plus a vector
 //* --------------------------------------------------------------------
+#[allow(dead_code)]
 pub fn daxpy_v(n: i32, da: f64, dx: &[f64], incx: i32, dy: &mut [f64], incy: i32) {
     if n <= 0 || da == 0.0 {
         return;
@@ -171,7 +176,15 @@ pub fn ddot(
 //* --------------------------------------------------------------------
 //*  DGBFA - factor a real band matrix by elimination
 //* --------------------------------------------------------------------
-pub fn dgbfa(abd: &mut [f64], lda: usize, n: usize, ml: usize, mu: usize, ipvt: &mut [i32]) -> i32 {
+#[allow(unused_variables)]
+pub fn dgbfa(
+    abd: &mut [f64],
+    _lda: usize,
+    n: usize,
+    ml: usize,
+    mu: usize,
+    ipvt: &mut [i32],
+) -> i32 {
     let m = ml + mu + 1;
     let mut info: i32 = 0;
     let j0 = mu + 1;
@@ -358,7 +371,6 @@ pub fn file_name_inc(file_name: &str) -> String {
             let mut digit = chars[i] as u8 - b'0';
             digit += 1;
             if digit == 10 {
-                digit = 0;
                 chars[i] = '0';
             } else {
                 chars[i] = (digit + b'0') as char;
@@ -402,8 +414,8 @@ pub fn gram(bump: &mut bump_struct::Bump) {
     }
 
     for it in 0..bump.nelemn {
-        let k = bump.node[it * bump.nnodes];
-        let kk = bump.node[it * bump.nnodes + 1];
+        let k = bump.node[it * NNODES];
+        let kk = bump.node[it * NNODES + 1];
 
         if (bump.xc[k] - bump.xprof).abs() > 1.0e-4 || (bump.xc[kk] - bump.xprof).abs() > 1.0e-4 {
             continue;
@@ -416,14 +428,13 @@ pub fn gram(bump: &mut bump_struct::Bump) {
             let y = bump.yc[k] + bma2 * (yq_gauss[iquad] + 1.0);
 
             let mut uiqdpt = 0.0;
-            for iq in 0..bump.nnodes {
+            for iq in 0..NNODES {
                 if iq == 0 || iq == 1 || iq == 3 {
-                    let (bb, _bx, _by) =
-                        qbf(x, y, it, iq, &bump.node, &bump.xc, &bump.yc, &bump.nnodes);
-                    let ip = bump.node[it * bump.nnodes + iq];
+                    let (bb, _bx, _by) = qbf(x, y, it, iq, &bump.node, &bump.xc, &bump.yc);
+                    let ip = bump.node[it * NNODES + iq];
                     let iun = bump.indx[ip * 2];
                     if 0 < iun {
-                        let ii = igetl(iun, &bump.iline);
+                        let ii = bump.iline_inv[iun as usize];
                         uiqdpt += bb * bump.uprof[(ii - 1) as usize];
                     } else if iun == -1 {
                         let ubc = ubdry(1, bump.yc[ip]);
@@ -432,31 +443,22 @@ pub fn gram(bump: &mut bump_struct::Bump) {
                 }
             }
 
-            for iq in 0..bump.nnodes {
+            for iq in 0..NNODES {
                 if iq == 0 || iq == 1 || iq == 3 {
-                    let ip = bump.node[it * bump.nnodes + iq];
-                    let (bb, _bx, _by) =
-                        qbf(x, y, it, iq, &bump.node, &bump.xc, &bump.yc, &bump.nnodes);
+                    let ip = bump.node[it * NNODES + iq];
+                    let (bb, _bx, _by) = qbf(x, y, it, iq, &bump.node, &bump.xc, &bump.yc);
                     let i_val = bump.indx[ip * 2];
                     if 0 < i_val {
-                        let ii = igetl(i_val, &bump.iline);
+                        let ii = bump.iline_inv[i_val as usize];
                         bump.r[(ii - 1) as usize] += bb * uiqdpt * ar;
-                        for iqq in 0..bump.nnodes {
+                        for iqq in 0..NNODES {
                             if iqq == 0 || iqq == 1 || iqq == 3 {
-                                let ipp = bump.node[it * bump.nnodes + iqq];
-                                let (bbb, _bbx_, _bby_) = qbf(
-                                    x,
-                                    y,
-                                    it,
-                                    iqq,
-                                    &bump.node,
-                                    &bump.xc,
-                                    &bump.yc,
-                                    &bump.nnodes,
-                                );
+                                let ipp = bump.node[it * NNODES + iqq];
+                                let (bbb, _bbx_, _bby_) =
+                                    qbf(x, y, it, iqq, &bump.node, &bump.xc, &bump.yc);
                                 let j_val = bump.indx[ipp * 2];
                                 if j_val != 0 {
-                                    let jj = igetl(j_val, &bump.iline);
+                                    let jj = bump.iline_inv[j_val as usize];
                                     bump.gr[((ii - 1) as usize) * bump.my + ((jj - 1) as usize)] +=
                                         bb * bbb * ar;
                                 }
@@ -597,42 +599,118 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
     let ioff = bump.nlband + bump.nlband + 1;
     let visc = 1.0 / bump.reynld;
     let use_sens = itype == -2;
+    let neqn = bump.neqn;
+    let nrow = bump.nrow;
 
-    let mut rhs = vec![0.0; bump.neqn];
-    for i in 0..bump.nrow {
-        for j in 0..bump.neqn {
-            bump.a[i * bump.neqn + j] = 0.0;
-        }
-    }
+    let mut rhs = vec![0.0; neqn];
+    bump.a[..nrow * neqn].fill(0.0);
 
-    for it in 0..bump.nelemn {
-        let mut ar = bump.area[it] / 3.0;
+    let nelemn = bump.nelemn;
+    let node_v = &bump.node;
+    let indx_v = &bump.indx;
+    let insc_v = &bump.insc;
+    let xc_v = &bump.xc;
+    let yc_v = &bump.yc;
+    let phi_v = &bump.phi;
+    let psi_v = &bump.psi;
+    let area_v = &bump.area;
+    let xm_v = &bump.xm;
+    let ym_v = &bump.ym;
+    let isotri_v = &bump.isotri;
 
-        for iquad in 0..bump.nquad {
-            let yq = bump.ym[it * bump.nquad + iquad];
-            let xq = bump.xm[it * bump.nquad + iquad];
+    for it in 0..nelemn {
+        let elem_nodes = [
+            node_v[it * NNODES],
+            node_v[it * NNODES + 1],
+            node_v[it * NNODES + 2],
+            node_v[it * NNODES + 3],
+            node_v[it * NNODES + 4],
+            node_v[it * NNODES + 5],
+        ];
+        let elem_indx_u = [
+            indx_v[elem_nodes[0] * 2],
+            indx_v[elem_nodes[1] * 2],
+            indx_v[elem_nodes[2] * 2],
+            indx_v[elem_nodes[3] * 2],
+            indx_v[elem_nodes[4] * 2],
+            indx_v[elem_nodes[5] * 2],
+        ];
+        let elem_indx_v = [
+            indx_v[elem_nodes[0] * 2 + 1],
+            indx_v[elem_nodes[1] * 2 + 1],
+            indx_v[elem_nodes[2] * 2 + 1],
+            indx_v[elem_nodes[3] * 2 + 1],
+            indx_v[elem_nodes[4] * 2 + 1],
+            indx_v[elem_nodes[5] * 2 + 1],
+        ];
+        let elem_insc = [
+            insc_v[elem_nodes[0]],
+            insc_v[elem_nodes[1]],
+            insc_v[elem_nodes[2]],
+            insc_v[elem_nodes[3]],
+            insc_v[elem_nodes[4]],
+            insc_v[elem_nodes[5]],
+        ];
+        let isotri = isotri_v[it];
+        let area = area_v[it];
+        let mut ar = area / 3.0;
+
+        for iquad in 0..NQUAD {
+            let yq = ym_v[it * NQUAD + iquad];
+            let xq = xm_v[it * NQUAD + iquad];
 
             let (det, etax, etay, xix, xiy);
 
-            if bump.isotri[it] == 1 {
-                (det, etax, etay, xix, xiy) =
-                    trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq, &bump.nnodes);
-                ar = det * bump.area[it] / 3.0;
+            if isotri == 1 {
+                (det, etax, etay, xix, xiy) = trans(it, node_v, xc_v, xq, yc_v, yq);
+                ar = det * area / 3.0;
             } else {
                 (det, etax, etay, xix, xiy) = (0.0, 0.0, 0.0, 0.0, 0.0);
             }
 
             let (un, unx, uny) = uval(etax, etay, bump, it, xix, xiy, xq, yq);
 
-            for iq in 0..bump.nnodes {
-                let ip = bump.node[it * bump.nnodes + iq];
-                let bb = bump.phi[phi_idx(it, iquad, iq, 0, bump.nquad, bump.nnodes)];
-                let bx = bump.phi[phi_idx(it, iquad, iq, 1, bump.nquad, bump.nnodes)];
-                let by = bump.phi[phi_idx(it, iquad, iq, 2, bump.nquad, bump.nnodes)];
-                let bbl = bump.psi[psi_idx(it, iquad, iq, bump.nquad, bump.nnodes)];
-                let ihor = bump.indx[ip * 2];
-                let iver = bump.indx[ip * 2 + 1];
-                let iprs = bump.insc[ip];
+            let phi_bb: [f64; NNODES] = [
+                phi_v[phi_idx(it, iquad, 0, 0)],
+                phi_v[phi_idx(it, iquad, 1, 0)],
+                phi_v[phi_idx(it, iquad, 2, 0)],
+                phi_v[phi_idx(it, iquad, 3, 0)],
+                phi_v[phi_idx(it, iquad, 4, 0)],
+                phi_v[phi_idx(it, iquad, 5, 0)],
+            ];
+            let phi_bx: [f64; NNODES] = [
+                phi_v[phi_idx(it, iquad, 0, 1)],
+                phi_v[phi_idx(it, iquad, 1, 1)],
+                phi_v[phi_idx(it, iquad, 2, 1)],
+                phi_v[phi_idx(it, iquad, 3, 1)],
+                phi_v[phi_idx(it, iquad, 4, 1)],
+                phi_v[phi_idx(it, iquad, 5, 1)],
+            ];
+            let phi_by: [f64; NNODES] = [
+                phi_v[phi_idx(it, iquad, 0, 2)],
+                phi_v[phi_idx(it, iquad, 1, 2)],
+                phi_v[phi_idx(it, iquad, 2, 2)],
+                phi_v[phi_idx(it, iquad, 3, 2)],
+                phi_v[phi_idx(it, iquad, 4, 2)],
+                phi_v[phi_idx(it, iquad, 5, 2)],
+            ];
+            let psi_bbl: [f64; NNODES] = [
+                psi_v[psi_idx(it, iquad, 0)],
+                psi_v[psi_idx(it, iquad, 1)],
+                psi_v[psi_idx(it, iquad, 2)],
+                psi_v[psi_idx(it, iquad, 3)],
+                psi_v[psi_idx(it, iquad, 4)],
+                psi_v[psi_idx(it, iquad, 5)],
+            ];
+
+            for iq in 0..NNODES {
+                let bb = phi_bb[iq];
+                let bx = phi_bx[iq];
+                let by = phi_by[iq];
+                let bbl = psi_bbl[iq];
+                let ihor = elem_indx_u[iq];
+                let iver = elem_indx_v[iq];
+                let iprs = elem_insc[iq];
 
                 if 0 < ihor {
                     rhs[(ihor - 1) as usize] += ar * bb * (un[0] * unx[0] + un[1] * uny[0]);
@@ -641,35 +719,40 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
                     rhs[(iver - 1) as usize] += ar * bb * (un[0] * unx[1] + un[1] * uny[1]);
                 }
 
-                for iqq in 0..bump.nnodes {
-                    let ipp = bump.node[it * bump.nnodes + iqq];
-                    let bbb = bump.phi[phi_idx(it, iquad, iqq, 0, bump.nquad, bump.nnodes)];
-                    let bbx = bump.phi[phi_idx(it, iquad, iqq, 1, bump.nquad, bump.nnodes)];
-                    let bby = bump.phi[phi_idx(it, iquad, iqq, 2, bump.nquad, bump.nnodes)];
-                    let bbbl = bump.psi[psi_idx(it, iquad, iqq, bump.nquad, bump.nnodes)];
-                    let ju = bump.indx[ipp * 2];
-                    let jv = bump.indx[ipp * 2 + 1];
-                    let jp = bump.insc[ipp];
+                for iqq in 0..NNODES {
+                    let bbb = phi_bb[iqq];
+                    let bbx = phi_bx[iqq];
+                    let bby = phi_by[iqq];
+                    let bbbl = psi_bbl[iqq];
+                    let ju = elem_indx_u[iqq];
+                    let jv = elem_indx_v[iqq];
+                    let jp = elem_insc[iqq];
+                    let ipp = elem_nodes[iqq];
 
                     if 0 < ju {
                         if 0 < ihor {
                             let iuse = (ihor - ju + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (ju - 1) as usize] += ar
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (ju - 1) as usize;
+                            bump.a[row_off + col] += ar
                                 * (visc * (by * bby + bx * bbx)
                                     + bb * (bbb * unx[0] + bbx * un[0] + bby * un[1]));
                         }
                         if 0 < iver {
                             let iuse = (iver - ju + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (ju - 1) as usize] +=
-                                ar * bb * bbb * unx[1];
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (ju - 1) as usize;
+                            bump.a[row_off + col] += ar * bb * bbb * unx[1];
                         }
                         if 0 < iprs {
                             let iuse = (iprs - ju + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (ju - 1) as usize] += ar * bbx * bbl;
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (ju - 1) as usize;
+                            bump.a[row_off + col] += ar * bbx * bbl;
                         }
                     } else if ju == itype {
                         let ubc = if ju == -1 {
-                            ubdry(1, bump.yc[ipp])
+                            ubdry(1, yc_v[ipp])
                         } else {
                             ubump(bump, ipp, iqq, it, 1)
                         };
@@ -693,22 +776,27 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
                     if 0 < jv {
                         if 0 < ihor {
                             let iuse = (ihor - jv + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (jv - 1) as usize] +=
-                                ar * bb * bbb * uny[0];
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (jv - 1) as usize;
+                            bump.a[row_off + col] += ar * bb * bbb * uny[0];
                         }
                         if 0 < iver {
                             let iuse = (iver - jv + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (jv - 1) as usize] += ar
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (jv - 1) as usize;
+                            bump.a[row_off + col] += ar
                                 * (visc * (by * bby + bx * bbx)
                                     + bb * (bbb * uny[1] + bby * un[1] + bbx * un[0]));
                         }
                         if 0 < iprs {
                             let iuse = (iprs - jv + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (jv - 1) as usize] += ar * bby * bbl;
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (jv - 1) as usize;
+                            bump.a[row_off + col] += ar * bby * bbl;
                         }
                     } else if jv == itype {
                         let ubc = if jv == -1 {
-                            ubdry(2, bump.yc[ipp])
+                            ubdry(2, yc_v[ipp])
                         } else {
                             ubump(bump, ipp, iqq, it, 2)
                         };
@@ -732,11 +820,15 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
                     if 0 < jp {
                         if 0 < ihor {
                             let iuse = (ihor - jp + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (jp - 1) as usize] -= ar * bx * bbbl;
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (jp - 1) as usize;
+                            bump.a[row_off + col] -= ar * bx * bbbl;
                         }
                         if 0 < iver {
                             let iuse = (iver - jp + ioff as i32) as usize;
-                            bump.a[(iuse - 1) * bump.neqn + (jp - 1) as usize] -= ar * by * bbbl;
+                            let row_off = (iuse - 1) * neqn;
+                            let col = (jp - 1) as usize;
+                            bump.a[row_off + col] -= ar * by * bbbl;
                         }
                     }
                 }
@@ -744,19 +836,19 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
         }
     }
 
-    rhs[bump.neqn - 1] = 0.0;
-    for j_1based in (bump.neqn - bump.nlband)..bump.neqn {
+    rhs[neqn - 1] = 0.0;
+    for j_1based in (neqn - bump.nlband)..neqn {
         let j = j_1based - 1;
-        let i = bump.neqn - j_1based + ioff;
-        bump.a[(i - 1) * bump.neqn + j] = 0.0;
+        let i = neqn - j_1based + ioff;
+        bump.a[(i - 1) * neqn + j] = 0.0;
     }
-    bump.a[(ioff - 1) * bump.neqn + (bump.neqn - 1)] = 1.0;
+    bump.a[(ioff - 1) * neqn + (neqn - 1)] = 1.0;
 
-    let mut ipvt = vec![0i32; bump.neqn];
+    let mut ipvt = vec![0i32; neqn];
     let info = dgbfa(
         &mut bump.a,
         bump.maxrow,
-        bump.neqn,
+        neqn,
         bump.nlband,
         bump.nlband,
         &mut ipvt,
@@ -778,7 +870,7 @@ pub fn linsys(bump: &mut bump_struct::Bump, itype: i32) {
     dgbsl(
         &mut bump.a,
         bump.maxrow,
-        bump.neqn,
+        neqn,
         bump.nlband,
         bump.nlband,
         &ipvt,
@@ -828,10 +920,9 @@ pub fn qbf(
     yq: f64,
     it: usize,
     inn: usize,
-    node: &Vec<usize>,
-    xc: &Vec<f64>,
-    yc: &Vec<f64>,
-    nnodes: &usize,
+    node: &[usize],
+    xc: &[f64],
+    yc: &[f64],
 ) -> (f64, f64, f64) {
     let in1;
     let in2;
@@ -857,9 +948,9 @@ pub fn qbf(
         in1 = inn;
         in2 = (inn + 1) % 3;
         in3 = (inn + 2) % 3;
-        i1 = node[it * nnodes + in1];
-        i2 = node[it * nnodes + in2];
-        i3 = node[it * nnodes + in3];
+        i1 = node[it * NNODES + in1];
+        i2 = node[it * NNODES + in2];
+        i3 = node[it * NNODES + in3];
         d = (xc[i2] - xc[i1]) * (yc[i3] - yc[i1]) - (xc[i3] - xc[i1]) * (yc[i2] - yc[i1]);
         t = 1.0 + ((yc[i2] - yc[i3]) * (xq - xc[i1]) + (xc[i3] - xc[i2]) * (yq - yc[i1])) / d;
         bb = t * (2.0 * t - 1.0);
@@ -870,9 +961,9 @@ pub fn qbf(
         in1 = inn_local;
         in2 = (inn_local + 1) % 3;
         in3 = (inn_local + 2) % 3;
-        i1 = node[it * nnodes + in1];
-        i2 = node[it * nnodes + in2];
-        i3 = node[it * nnodes + in3];
+        i1 = node[it * NNODES + in1];
+        i2 = node[it * NNODES + in2];
+        i3 = node[it * NNODES + in3];
         j1 = i2;
         j2 = i3;
         j3 = i1;
@@ -967,12 +1058,12 @@ pub fn resid(bump: &mut bump_struct::Bump) {
     for it in 0..bump.nelemn {
         let mut ar = bump.area[it] / 3.0;
 
-        for iquad in 0..bump.nquad {
-            let yq = bump.ym[it * bump.nquad + iquad];
-            let xq = bump.xm[it * bump.nquad + iquad];
+        for iquad in 0..NQUAD {
+            let yq = bump.ym[it * NQUAD + iquad];
+            let xq = bump.xm[it * NQUAD + iquad];
 
             let (det, etax, etay, xix, xiy) = if bump.isotri[it] == 1 {
-                let result = trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq, &bump.nnodes);
+                let result = trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq);
                 ar = result.0 * bump.area[it] / 3.0;
                 result
             } else {
@@ -981,12 +1072,12 @@ pub fn resid(bump: &mut bump_struct::Bump) {
 
             let (un, unx, uny) = uval(etax, etay, bump, it, xix, xiy, xq, yq);
 
-            for iq in 0..bump.nnodes {
-                let ip = bump.node[it * bump.nnodes + iq];
-                let bb = bump.phi[phi_idx(it, iquad, iq, 0, bump.nquad, bump.nnodes)];
-                let bx = bump.phi[phi_idx(it, iquad, iq, 1, bump.nquad, bump.nnodes)];
-                let by = bump.phi[phi_idx(it, iquad, iq, 2, bump.nquad, bump.nnodes)];
-                let bbl = bump.psi[psi_idx(it, iquad, iq, bump.nquad, bump.nnodes)];
+            for iq in 0..NNODES {
+                let ip = bump.node[it * NNODES + iq];
+                let bb = bump.phi[phi_idx(it, iquad, iq, 0)];
+                let bx = bump.phi[phi_idx(it, iquad, iq, 1)];
+                let by = bump.phi[phi_idx(it, iquad, iq, 2)];
+                let bbl = bump.psi[psi_idx(it, iquad, iq)];
                 let ihor = bump.indx[ip * 2];
                 let iver = bump.indx[ip * 2 + 1];
                 let iprs = bump.insc[ip];
@@ -998,12 +1089,12 @@ pub fn resid(bump: &mut bump_struct::Bump) {
                     bump.res[(iver - 1) as usize] -= ar * bb * (un[0] * unx[1] + un[1] * uny[1]);
                 }
 
-                for iqq in 0..bump.nnodes {
-                    let ipp = bump.node[it * bump.nnodes + iqq];
-                    let bbb = bump.phi[phi_idx(it, iquad, iqq, 0, bump.nquad, bump.nnodes)];
-                    let bbx = bump.phi[phi_idx(it, iquad, iqq, 1, bump.nquad, bump.nnodes)];
-                    let bby = bump.phi[phi_idx(it, iquad, iqq, 2, bump.nquad, bump.nnodes)];
-                    let bbbl = bump.psi[psi_idx(it, iquad, iqq, bump.nquad, bump.nnodes)];
+                for iqq in 0..NNODES {
+                    let ipp = bump.node[it * NNODES + iqq];
+                    let bbb = bump.phi[phi_idx(it, iquad, iqq, 0)];
+                    let bbx = bump.phi[phi_idx(it, iquad, iqq, 1)];
+                    let bby = bump.phi[phi_idx(it, iquad, iqq, 2)];
+                    let bbbl = bump.psi[psi_idx(it, iquad, iqq)];
                     let ju = bump.indx[ipp * 2];
                     let jv = bump.indx[ipp * 2 + 1];
                     let jp = bump.insc[ipp];
@@ -1189,8 +1280,8 @@ pub fn setban(bump: &mut bump_struct::Bump) {
     bump.nlband = 0;
 
     for it in 0..bump.nelemn {
-        for iq in 0..bump.nnodes {
-            let ip = bump.node[it * bump.nnodes + iq];
+        for iq in 0..NNODES {
+            let ip = bump.node[it * NNODES + iq];
             for iuk in 0..3 {
                 let i_val = if iuk == 2 {
                     bump.insc[ip]
@@ -1198,8 +1289,8 @@ pub fn setban(bump: &mut bump_struct::Bump) {
                     bump.indx[ip * 2 + iuk]
                 };
                 if 0 < i_val {
-                    for iqq in 0..bump.nnodes {
-                        let ipp = bump.node[it * bump.nnodes + iqq];
+                    for iqq in 0..NNODES {
+                        let ipp = bump.node[it * NNODES + iqq];
                         for iukk in 0..3 {
                             let j_val = if iukk == 2 {
                                 bump.insc[ipp]
@@ -1253,34 +1344,23 @@ pub fn setbas(bump: &mut bump_struct::Bump) {
     let mut by;
 
     for it in 0..bump.nelemn {
-        for j in 0..bump.nquad {
-            xq = bump.xm[it * bump.nquad + j];
-            yq = bump.ym[it * bump.nquad + j];
-            (det, etax, etay, xix, xiy) =
-                trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq, &bump.nnodes);
+        for j in 0..NQUAD {
+            xq = bump.xm[it * NQUAD + j];
+            yq = bump.ym[it * NQUAD + j];
+            (det, etax, etay, xix, xiy) = trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq);
 
-            for iq in 0..bump.nnodes {
+            for iq in 0..NNODES {
                 if bump.isotri[it] == 0 {
-                    bump.psi[psi_idx(it, j, iq, bump.nquad, bump.nnodes)] = bsp(
-                        it,
-                        iq,
-                        0,
-                        &bump.node,
-                        &bump.xc,
-                        xq,
-                        &bump.yc,
-                        yq,
-                        &bump.nnodes,
-                    );
-                    (bb, bx, by) =
-                        qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc, &bump.nnodes);
+                    bump.psi[psi_idx(it, j, iq)] =
+                        bsp(it, iq, 0, &bump.node, &bump.xc, xq, &bump.yc, yq);
+                    (bb, bx, by) = qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc);
                 } else {
                     (bb, bx, by) = refqbf(xq, yq, iq, etax, etay, xix, xiy);
-                    bump.psi[psi_idx(it, j, iq, bump.nquad, bump.nnodes)] = refbsp(xq, yq, iq);
+                    bump.psi[psi_idx(it, j, iq)] = refbsp(xq, yq, iq);
                 }
-                bump.phi[phi_idx(it, j, iq, 0, bump.nquad, bump.nnodes)] = bb;
-                bump.phi[phi_idx(it, j, iq, 1, bump.nquad, bump.nnodes)] = bx;
-                bump.phi[phi_idx(it, j, iq, 2, bump.nquad, bump.nnodes)] = by;
+                bump.phi[phi_idx(it, j, iq, 0)] = bb;
+                bump.phi[phi_idx(it, j, iq, 1)] = bx;
+                bump.phi[phi_idx(it, j, iq, 2)] = by;
             }
         }
     }
@@ -1352,12 +1432,12 @@ pub fn setgrd(ibump: i32, bump: &mut bump_struct::Bump) /*  -> (bool, usize) */
                 ip1 = ip + bump.my;
                 ip2 = ip + bump.my + bump.my;
 
-                bump.node[ielemn * bump.nnodes] = ip;
-                bump.node[ielemn * bump.nnodes + 1] = ip + 2;
-                bump.node[ielemn * bump.nnodes + 2] = ip2 + 2;
-                bump.node[ielemn * bump.nnodes + 3] = ip + 1;
-                bump.node[ielemn * bump.nnodes + 4] = ip1 + 2;
-                bump.node[ielemn * bump.nnodes + 5] = ip1 + 1;
+                bump.node[ielemn * NNODES] = ip;
+                bump.node[ielemn * NNODES + 1] = ip + 2;
+                bump.node[ielemn * NNODES + 2] = ip2 + 2;
+                bump.node[ielemn * NNODES + 3] = ip + 1;
+                bump.node[ielemn * NNODES + 4] = ip1 + 2;
+                bump.node[ielemn * NNODES + 5] = ip1 + 1;
 
                 if ibump == 0 {
                     bump.isotri[ielemn] = 0;
@@ -1371,12 +1451,12 @@ pub fn setgrd(ibump: i32, bump: &mut bump_struct::Bump) /*  -> (bool, usize) */
 
                 ielemn += 1;
 
-                bump.node[ielemn * bump.nnodes] = ip;
-                bump.node[ielemn * bump.nnodes + 1] = ip2 + 2;
-                bump.node[ielemn * bump.nnodes + 2] = ip2;
-                bump.node[ielemn * bump.nnodes + 3] = ip1 + 1;
-                bump.node[ielemn * bump.nnodes + 4] = ip2 + 1;
-                bump.node[ielemn * bump.nnodes + 5] = ip1;
+                bump.node[ielemn * NNODES] = ip;
+                bump.node[ielemn * NNODES + 1] = ip2 + 2;
+                bump.node[ielemn * NNODES + 2] = ip2;
+                bump.node[ielemn * NNODES + 3] = ip1 + 1;
+                bump.node[ielemn * NNODES + 4] = ip2 + 1;
+                bump.node[ielemn * NNODES + 5] = ip1;
 
                 if ibump == 0 {
                     bump.isotri[ielemn] = 0;
@@ -1397,12 +1477,12 @@ pub fn setgrd(ibump: i32, bump: &mut bump_struct::Bump) /*  -> (bool, usize) */
                 ip1 = ip + bump.mx;
                 ip2 = ip + bump.mx + bump.mx;
 
-                bump.node[ielemn * bump.nnodes] = ip;
-                bump.node[ielemn * bump.nnodes + 1] = ip2;
-                bump.node[ielemn * bump.nnodes + 2] = ip2 + 2;
-                bump.node[ielemn * bump.nnodes + 3] = ip1;
-                bump.node[ielemn * bump.nnodes + 4] = ip2 + 1;
-                bump.node[ielemn * bump.nnodes + 5] = ip1 + 1;
+                bump.node[ielemn * NNODES] = ip;
+                bump.node[ielemn * NNODES + 1] = ip2;
+                bump.node[ielemn * NNODES + 2] = ip2 + 2;
+                bump.node[ielemn * NNODES + 3] = ip1;
+                bump.node[ielemn * NNODES + 4] = ip2 + 1;
+                bump.node[ielemn * NNODES + 5] = ip1 + 1;
 
                 if ibump == 0 {
                     bump.isotri[ielemn] = 0;
@@ -1416,12 +1496,12 @@ pub fn setgrd(ibump: i32, bump: &mut bump_struct::Bump) /*  -> (bool, usize) */
 
                 ielemn += 1;
 
-                bump.node[ielemn * bump.nnodes] = ip;
-                bump.node[ielemn * bump.nnodes + 1] = ip2 + 2;
-                bump.node[ielemn * bump.nnodes + 2] = ip + 2;
-                bump.node[ielemn * bump.nnodes + 3] = ip1 + 1;
-                bump.node[ielemn * bump.nnodes + 4] = ip1 + 2;
-                bump.node[ielemn * bump.nnodes + 5] = ip + 1;
+                bump.node[ielemn * NNODES] = ip;
+                bump.node[ielemn * NNODES + 1] = ip2 + 2;
+                bump.node[ielemn * NNODES + 2] = ip + 2;
+                bump.node[ielemn * NNODES + 3] = ip1 + 1;
+                bump.node[ielemn * NNODES + 4] = ip1 + 2;
+                bump.node[ielemn * NNODES + 5] = ip + 1;
 
                 if ibump == 0 {
                     bump.isotri[ielemn] = 0;
@@ -1494,7 +1574,7 @@ pub fn setgrd(ibump: i32, bump: &mut bump_struct::Bump) /*  -> (bool, usize) */
         for it in 0..bump.nelemn {
             print!("{}\t", it + 1);
             for i in 0..6 {
-                print!("{}\t", bump.node[it * bump.nnodes + i] + 1);
+                print!("{}\t", bump.node[it * NNODES + i] + 1);
             }
             println!();
         }
@@ -1539,6 +1619,13 @@ pub fn setlin(bump: &mut bump_struct::Bump) {
         bump.iline[i] = bump.indx[ip * 2];
     }
 
+    bump.iline_inv = vec![-1; bump.neqn + 1];
+    for (j, &val) in bump.iline.iter().enumerate() {
+        if val > 0 {
+            bump.iline_inv[val as usize] = (j + 1) as i32;
+        }
+    }
+
     if 1 <= bump.iwrite {
         println!();
         println!("  Indices of unknowns along the profile line:");
@@ -1557,9 +1644,9 @@ pub fn setlin(bump: &mut bump_struct::Bump) {
 //* --------------------------------------------------------------------
 pub fn setqud(bump: &mut bump_struct::Bump) {
     for it in 0..bump.nelemn {
-        let ip1: usize = bump.node[it * bump.nnodes];
-        let ip2: usize = bump.node[it * bump.nnodes + 1];
-        let ip3: usize = bump.node[it * bump.nnodes + 2];
+        let ip1: usize = bump.node[it * NNODES];
+        let ip2: usize = bump.node[it * NNODES + 1];
+        let ip3: usize = bump.node[it * NNODES + 2];
         let x1: f64 = bump.xc[ip1];
         let x2: f64 = bump.xc[ip2];
         let x3: f64 = bump.xc[ip3];
@@ -1568,21 +1655,21 @@ pub fn setqud(bump: &mut bump_struct::Bump) {
         let y3: f64 = bump.yc[ip3];
 
         if bump.isotri[it] == 0 {
-            bump.xm[it * bump.nquad] = 0.5 * (x1 + x2);
-            bump.xm[it * bump.nquad + 1] = 0.5 * (x2 + x3);
-            bump.xm[it * bump.nquad + 2] = 0.5 * (x3 + x1);
-            bump.ym[it * bump.nquad] = 0.5 * (y1 + y2);
-            bump.ym[it * bump.nquad + 1] = 0.5 * (y2 + y3);
-            bump.ym[it * bump.nquad + 2] = 0.5 * (y3 + y1);
+            bump.xm[it * NQUAD] = 0.5 * (x1 + x2);
+            bump.xm[it * NQUAD + 1] = 0.5 * (x2 + x3);
+            bump.xm[it * NQUAD + 2] = 0.5 * (x3 + x1);
+            bump.ym[it * NQUAD] = 0.5 * (y1 + y2);
+            bump.ym[it * NQUAD + 1] = 0.5 * (y2 + y3);
+            bump.ym[it * NQUAD + 2] = 0.5 * (y3 + y1);
             bump.area[it] =
                 0.5 * ((y1 + y2) * (x2 - x1) + (y2 + y3) * (x3 - x2) + (y3 + y1) * (x1 - x3)).abs();
         } else {
-            bump.xm[it * bump.nquad] = 0.5;
-            bump.ym[it * bump.nquad] = 0.5;
-            bump.xm[it * bump.nquad + 1] = 1.0;
-            bump.ym[it * bump.nquad + 1] = 0.5;
-            bump.xm[it * bump.nquad + 2] = 0.5;
-            bump.ym[it * bump.nquad + 2] = 0.0;
+            bump.xm[it * NQUAD] = 0.5;
+            bump.ym[it * NQUAD] = 0.5;
+            bump.xm[it * NQUAD + 1] = 1.0;
+            bump.ym[it * NQUAD + 1] = 0.5;
+            bump.xm[it * NQUAD + 2] = 0.5;
+            bump.ym[it * NQUAD + 2] = 0.0;
             bump.area[it] = 0.5;
         }
     }
@@ -1592,13 +1679,13 @@ pub fn setqud(bump: &mut bump_struct::Bump) {
         println!();
         for i in 0..bump.nelemn {
             println!("{}\t{}", i + 1, bump.area[i]);
-            for j in 0..bump.nquad {
+            for j in 0..NQUAD {
                 println!(
                     "{}\t{}\t{}\t{}",
                     i + 1,
                     j + 1,
-                    bump.xm[i * bump.nquad + j],
-                    bump.ym[i * bump.nquad + j]
+                    bump.xm[i * NQUAD + j],
+                    bump.ym[i * NQUAD + j]
                 );
             }
         }
@@ -1652,19 +1739,18 @@ pub fn timestamp() {
 //* --------------------------------------------------------------------
 pub fn trans(
     it: usize,
-    node: &Vec<usize>,
-    xc: &Vec<f64>,
+    node: &[usize],
+    xc: &[f64],
     xq: f64,
-    yc: &Vec<f64>,
+    yc: &[f64],
     yq: f64,
-    nnodes: &usize,
 ) -> (f64, f64, f64, f64, f64) {
-    let i1 = node[it * nnodes];
-    let i2 = node[it * nnodes + 1];
-    let i3 = node[it * nnodes + 2];
-    let i4 = node[it * nnodes + 3];
-    let i5 = node[it * nnodes + 4];
-    let i6 = node[it * nnodes + 5];
+    let i1 = node[it * NNODES];
+    let i2 = node[it * NNODES + 1];
+    let i3 = node[it * NNODES + 2];
+    let i4 = node[it * NNODES + 3];
+    let i5 = node[it * NNODES + 4];
+    let i6 = node[it * NNODES + 5];
 
     let x1 = xc[i1];
     let y1 = yc[i1];
@@ -1752,8 +1838,7 @@ pub fn ubump(bump: &bump_struct::Bump, ip: usize, iqq: usize, it: usize, iukk: u
             5 => (0.5, 0.0),
             _ => (0.0, 0.0),
         };
-        (det, etax, etay, xix, xiy) =
-            trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq, &bump.nnodes);
+        (det, etax, etay, xix, xiy) = trans(it, &bump.node, &bump.xc, xq, &bump.yc, yq);
     }
 
     let (_un, _unx, uny) = _ubump_uval(bump, it, xix, xiy, xq, yq, det, etax, etay);
@@ -1775,7 +1860,7 @@ pub fn _ubump_uval(
     xiy: f64,
     xq: f64,
     yq: f64,
-    det: f64,
+    _det: f64,
     etax: f64,
     etay: f64,
 ) -> ([f64; 2], [f64; 2], [f64; 2]) {
@@ -1783,13 +1868,13 @@ pub fn _ubump_uval(
     let mut unx = [0.0; 2];
     let mut uny = [0.0; 2];
 
-    for iq in 0..bump.nnodes {
+    for iq in 0..NNODES {
         let (bb, bx, by) = if bump.isotri[it] == 1 {
             refqbf(xq, yq, iq, etax, etay, xix, xiy)
         } else {
-            qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc, &bump.nnodes)
+            qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc)
         };
-        let ip_local = bump.node[it * bump.nnodes + iq];
+        let ip_local = bump.node[it * NNODES + iq];
 
         for iuk in 0..2 {
             let iun = bump.indx[ip_local * 2 + iuk];
@@ -1825,13 +1910,13 @@ pub fn uval(
     let mut unx = [0.0; 2];
     let mut uny = [0.0; 2];
 
-    for iq in 0..bump.nnodes {
+    for iq in 0..NNODES {
         let (bb, bx, by) = if bump.isotri[it] == 1 {
             refqbf(xq, yq, iq, etax, etay, xix, xiy)
         } else {
-            qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc, &bump.nnodes)
+            qbf(xq, yq, it, iq, &bump.node, &bump.xc, &bump.yc)
         };
-        let ip_local = bump.node[it * bump.nnodes + iq];
+        let ip_local = bump.node[it * NNODES + iq];
 
         for iuk in 0..2 {
             let iun = bump.indx[ip_local * 2 + iuk];
