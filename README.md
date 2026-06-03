@@ -1,126 +1,83 @@
-# Traduccion de un codigo f90 legacy a rust, c++ y python
+# Traducción de un código F90 legacy a Rust, C++ y Python
 
+## Descripción de las traducciones
 
-## Descripcion de las traduciones
-### Codigo original: 
+### Código original
 
-````
-fortran\bump.f90
-````
+```
+fortran/bump.f90
+```
 
-Compilado con (en el directorio fortran):
-````
-flang fortran\bump.f90 -O3 -o .\fortran\build\bump.exe
-````
+Compilado con (en el directorio `fortran`):
 
-### Codigo python
+```bash
+flang fortran/bump.f90 -O3 -o ./fortran/build/bump.exe
+```
 
-````
-python\bump.py
-````
+### Código Python
+
+```
+python/bump.py
+```
 
 Para ejecutar:
-````
+
+```bash
 python bump.py
-````
+```
 
+### Código C++
 
-### Codigo C++
+```
+c++/src/main.cpp
+```
 
-````
-c++\src\main.cpp
-````
+Compilado con (en el directorio `c++`):
 
-Compilado con (en el directorio c++):
-````
-clang++ src\main.cpp -std=c++23 -o3 -o build\main.exe
-````
+```bash
+clang++ src/main.cpp -std=c++23 -O3 -o build/main.exe
+```
 
-### Codigo Rust
+### Código Rust
 
-````
-rust\src\main.rs
-````
+```
+rust/src/main.rs
+```
 
 Para ejecutar:
-````
+
+```bash
 cargo run --release
-````
+```
 
-# Traduccion de un codigo f90 legacy a rust, c++ y python
+## Toma de tiempos
 
-
-## Descripcion de las traduciones
-### Codigo original: 
-
-````
-fortran\bump.f90
-````
-
-Compilado con (en el directorio fortran):
-````
-flang fortran\bump.f90 -O3 -o .\fortran\build\bump.exe
-````
-
-### Codigo python
-
-````
-python\bump.py
-````
-
-Para ejecutar:
-````
-python bump.py
-````
-
-
-### Codigo C++
-
-````
-c++\src\main.cpp
-````
-
-Compilado con (en el directorio c++):
-````
-clang++ src\main.cpp -std=c++23 -o3 -o build\main.exe
-````
-
-### Codigo Rust
-
-````
-rust\src\main.rs
-````
-
-Para ejecutar:
-````
-cargo run --release
-````
-
-## Toma del tiempo
-
-A excepcion de f90, rust y c++ guardaran el tiempo de ejecucion en un archivo aparte predefinido como tiempos.txt en cada uno, un script de python se encargara de correr el programa n veces y promediara el tiempo que se guarda en el archivo ya mencionado.
+A excepción de F90, Rust y C++ guardarán el tiempo de ejecución en un archivo aparte predefinido (`tiempos.txt`) en cada uno de sus directorios. Un script de Python se encargará de ejecutar el programa *n* veces y promediará el tiempo que se guarda en el archivo ya mencionado.
 
 ### Caso Fortran 90
-En el caso de fortran 90 Python mide el timepo de ejcucion de esta forma:
-````python
+
+En el caso de Fortran 90, Python mide el tiempo de ejecución de esta forma:
+
+```python
 start: float = time.perf_counter()
 subprocess.run(
-  comando, 
-  stdout=subprocess.DEVNULL, 
-  stderr=subprocess.DEVNULL
+    comando,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
 )
 end: float = time.perf_counter()
 tiempos.append(end - start)
-````
+```
 
-y se promedia el tiempo medido por python.
+y se promedia el tiempo medido por Python.
 
-> Nota: la diferencia con el tiempo dado por el propio programa es despreciable (1%~2% de diferencia o incluso menos).
+> **Nota:** la diferencia con el tiempo dado por el propio programa es despreciable (1 % – 2 % de diferencia o incluso menos).
 
-## Resultados:
+## Resultados
 
-````
-Repeticiones:  10
+```
+Repeticiones: 10
+
 +--------------+--------------+---------------+
 |   Tiempo F90 |   Tiempo Cpp |   Tiempo Rust |
 +==============+==============+===============+
@@ -144,8 +101,9 @@ Repeticiones:  10
 +--------------+--------------+---------------+
 |     0.407791 |     0.689118 |      0.537743 |
 +--------------+--------------+---------------+
+
 +------------+----------+
-|  Lenguaje  |    Media |
+|  Lenguaje  |   Media  |
 +============+==========+
 |    f90     | 0.381152 |
 +------------+----------+
@@ -153,4 +111,23 @@ Repeticiones:  10
 +------------+----------+
 |    rust    | 0.690695 |
 +------------+----------+
+```
+
+
+## Requerimentos necesarios:
+
+### Rust
+
+````bash
+chrono
+````
+
+### Python
+````
+pip install tabulate
+````
+
+#### Para su version de bump
+````
+pip install numpy
 ````
