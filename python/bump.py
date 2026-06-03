@@ -13,7 +13,6 @@ Navier Stokes equations (primitive variable formulation):
   dUdx + dVdy = 0
 """
 
-from numba import njit
 import numpy as np
 import time
 import datetime
