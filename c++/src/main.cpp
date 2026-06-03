@@ -231,19 +231,19 @@ int main() {
 
   auto inicio = std::chrono::high_resolution_clock::now();
   timestamp();
-  std::cout << std::endl;
-  std::cout << "BUMP" << std::endl;
-  std::cout << "  C++ version" << std::endl;
-  std::cout << "  Control problem for channel flow over a bump." << std::endl;
-  std::cout << std::endl;
-  std::cout << "  The bump will be generated with a height of " << bump.aprof << std::endl;
-  std::cout << std::endl;
-  std::cout << "  NX = " << nx << std::endl;
-  std::cout << "  NY = " << ny << std::endl;
-  std::cout << "  Number of elements = " << bump.nelemn << std::endl;
-  std::cout << "  Reynolds number =  " << bump.reynld << std::endl;
-  std::cout << "  Secant tolerance = " << bump.tolsec << std::endl;
-  std::cout << "  Newton tolerance = " << bump.tolnew << std::endl;
+  std::println();
+  std::println("BUMP");
+  std::println("  C++ version");
+  std::println("  Control problem for channel flow over a bump.");
+  std::println();
+  std::println("  The bump will be generated with a height of {}", bump.aprof);
+  std::println();
+  std::println("  NX = {}", nx);
+  std::println("  NY = {}", ny);
+  std::println("  Number of elements = {}", bump.nelemn);
+  std::println("  Reynolds number =  {}", bump.reynld);
+  std::println("  Secant tolerance = {}", bump.tolsec);
+  std::println("  Newton tolerance = {}", bump.tolnew);
 
   int ibump = 2;
   setgrd(ibump, bump);
@@ -268,16 +268,16 @@ int main() {
   bump.uprof = getg(bump.g, bump.iline, bump.my);
 
   if (1 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "Velocity profile:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("Velocity profile:");
+    std::println();
     for (size_t i = 0; i < bump.my; i++) {
-      std::cout << bump.uprof[i] << "\t";
+      std::print("{}\t", bump.uprof[i]);
       if ((i + 1) % 5 == 0) {
-        std::cout << std::endl;
+        std::println();
       }
     }
-    std::cout << std::endl;
+    std::println();
   }
 
   gram(bump);
@@ -303,8 +303,8 @@ int main() {
     if (iter > bump.maxsec) {
       break;
     }
-    std::cout << std::endl;
-    std::cout << "Secant iteration " << iter << std::endl;
+    std::println();
+    std::println("Secant iteration {}", iter);
 
     bump.numsec += 1;
 
@@ -317,16 +317,16 @@ int main() {
     bump.uprof = getg(bump.g, bump.iline, bump.my);
 
     if (1 <= bump.iwrite) {
-      std::cout << std::endl;
-      std::cout << "Velocity profile:" << std::endl;
-      std::cout << std::endl;
+      std::println();
+      std::println("Velocity profile:");
+      std::println();
       for (size_t i = 0; i < bump.my; i++) {
-        std::cout << bump.uprof[i] << "\t";
+        std::print("{}\t", bump.uprof[i]);
         if ((i + 1) % 5 == 0) {
-          std::cout << std::endl;
+          std::println();
         }
       }
-      std::cout << std::endl;
+      std::println();
     }
 
     linsys(bump, -2);
@@ -334,16 +334,16 @@ int main() {
     bump.dcda = getg(bump.sens, bump.iline, bump.my);
 
     if (2 <= bump.iwrite) {
-      std::cout << std::endl;
-      std::cout << "Sensitivities:" << std::endl;
-      std::cout << std::endl;
+      std::println();
+      std::println("Sensitivities:");
+      std::println();
       for (size_t i = 0; i < bump.my; i++) {
-        std::cout << bump.dcda[i] << "\t";
+        std::print("{}\t", bump.dcda[i]);
         if ((i + 1) % 5 == 0) {
-          std::cout << std::endl;
+          std::println();
         }
       }
-      std::cout << std::endl;
+      std::println();
     }
 
     bump.rjpnew = 0.0;
@@ -367,8 +367,8 @@ int main() {
       uv_write(bump, bump.f, f_uv);
     }
 
-    std::cout << std::endl;
-    std::cout << "  Parameter = " << bump.anew << ", J prime = " << bump.rjpnew << std::endl;
+    std::println();
+    std::println("  Parameter = {}, J prime = {}", bump.anew, bump.rjpnew);
 
     if (1 < iter) {
       double denom = bump.rjpnew - bump.rjpold;
@@ -385,30 +385,30 @@ int main() {
       ? std::abs(bump.anew - bump.aold) / bump.anew
       : 0.0;
 
-    std::cout << "  New value of parameter = " << bump.anew << std::endl;
-    std::cout << "  Convergence test = " << test << std::endl;
+    std::println("  New value of parameter = {}", bump.anew);
+    std::println("  Convergence test = {}", test);
 
     if (std::abs(bump.anew - bump.aold) <= std::abs(bump.anew) * bump.tolsec && 1 < iter) {
-      std::cout << "Secant iteration converged." << std::endl;
+      std::println("Secant iteration converged.");
       break;
     }
     iter += 1;
   }
   if (bump.maxsec < iter) {
-    std::cout << "  Secant iteration failed to converge." << std::endl;
+    std::println("  Secant iteration failed to converge.");
   }
 
   auto duracion = std::chrono::high_resolution_clock::now() - inicio;
   double duracion_sec = std::chrono::duration<double>(duracion).count();
 
-  std::cout << std::endl;
-  std::cout << "  Total execution time = " << duracion_sec << " s" << std::endl;
-  std::cout << "  Number of secant steps = " << bump.numsec << std::endl;
-  std::cout << "  Number of Newton steps = " << bump.numnew << std::endl;
-  std::cout << std::endl;
-  std::cout << "BUMP:" << std::endl;
-  std::cout << "  Normal end of execution." << std::endl;
-  std::cout << std::endl;
+  std::println();
+  std::println("  Total execution time = {} s", duracion_sec);
+  std::println("  Number of secant steps = {}", bump.numsec);
+  std::println("  Number of Newton steps = {}", bump.numnew);
+  std::println();
+  std::println("BUMP:");
+  std::println("  Normal end of execution.");
+  std::println();
   timestamp();
 
   if (bump.save_times) {
@@ -455,11 +455,11 @@ double bsp(
   } else if (id == 2) {
     return (xc[g3] - xc[g2]) / d;
   } else {
-    std::cout << std::endl;
-    std::cout << "BSP - Fatal error!" << std::endl;
-    std::cout << "  Illegal local index value for linear basis." << std::endl;
-    std::cout << "  Legal values are 1, 2 or 3." << std::endl;
-    std::cout << "  The input value was ID = " << id + 1 << std::endl;
+    std::println();
+    std::println("BSP - Fatal error!");
+    std::println("  Illegal local index value for linear basis.");
+    std::println("  Legal values are 1, 2 or 3.");
+    std::println("  The input value was ID = {}", id + 1);
     std::exit(1);
   }
 }
@@ -724,9 +724,9 @@ void dscal_m(
 //* --------------------------------------------------------------------
 std::string file_name_inc(const std::string& file_name) {
   if (file_name.empty()) {
-    std::cout << std::endl;
-    std::cout << "FILE_NAME_INC - Fatal error!" << std::endl;
-    std::cout << "The input string is empty." << std::endl;
+    std::println();
+    std::println("FILE_NAME_INC - Fatal error!");
+    std::println("The input string is empty.");
     std::exit(1);
   }
   std::string s = file_name;
@@ -836,19 +836,19 @@ void gram(Bump& bump) {
   }
 
   if (3 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "Gram matrix:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("Gram matrix:");
+    std::println();
     for (size_t i = 0; i < bump.my; i++) {
       for (size_t j = 0; j < bump.my; j++) {
-        std::cout << i + 1 << " " << j + 1 << " " << bump.gr[i * bump.my + j] << std::endl;
+        std::println("{} {} {}", i + 1, j + 1, bump.gr[i * bump.my + j]);
       }
     }
-    std::cout << std::endl;
-    std::cout << "R vector:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("R vector:");
+    std::println();
     for (size_t i = 0; i < bump.my; i++) {
-      std::cout << bump.r[i] << std::endl;
+      std::println("{}", bump.r[i]);
     }
   }
 }
@@ -858,9 +858,9 @@ void gram(Bump& bump) {
 //* --------------------------------------------------------------------
 size_t i4_modp(int i, int j) {
   if (j == 0) {
-    std::cout << std::endl;
-    std::cout << "I4_MODP - Fatal error!" << std::endl;
-    std::cout << "  Illegal divisor J = " << j << std::endl;
+    std::println();
+    std::println("I4_MODP - Fatal error!");
+    std::println("  Illegal divisor J = {}", j);
     std::exit(1);
   }
   int value = i % j;
@@ -1161,9 +1161,9 @@ void linsys(Bump& bump, int itype) {
   int info = dgbfa(bump.a, bump.maxrow, neqn, bump.nlband, bump.nlband, ipvt);
 
   if (info != 0) {
-    std::cout << std::endl;
-    std::cout << "LINSYS - fatal error!" << std::endl;
-    std::cout << "DGBFA returns INFO = " << info + 1 << std::endl;
+    std::println();
+    std::println("LINSYS - fatal error!");
+    std::println("DGBFA returns INFO = {}", info + 1);
     std::exit(1);
   }
 
@@ -1187,19 +1187,19 @@ void nstoke(Bump& bump) {
 
     size_t imax = idamax_v((int)bump.neqn, bump.g, 1);
     double diff = std::abs(bump.g[imax]);
-    std::cout << "NSTOKE: Iteration " << iter + 1 << ", MaxNorm(diff) = " << diff << std::endl;
+    std::println("NSTOKE: Iteration {}, MaxNorm(diff) = {}", iter + 1, diff);
 
     for (size_t i = 0; i < bump.neqn; i++) {
       bump.g[i] = bump.f[i];
     }
 
     if (diff <= bump.tolnew) {
-      std::cout << "NSTOKE converged." << std::endl;
+      std::println("NSTOKE converged.");
       return;
     }
 
     if (iter == bump.maxnew - 1) {
-      std::cout << "NSTOKE failed!" << std::endl;
+      std::println("NSTOKE failed!");
       std::exit(1);
     }
   }
@@ -1297,7 +1297,7 @@ std::tuple<double, double, double> refqbf(
     tbx = 4.0 - 8.0 * x + 4.0 * y;
     tby = -4.0 + 4.0 * x;
   } else {
-    std::cout << "REFQBF - Illegal value of IN = " << inn + 1 << std::endl;
+    std::println("REFQBF - Illegal value of IN = {}", inn + 1);
     std::exit(1);
   }
 
@@ -1475,42 +1475,42 @@ void resid(Bump& bump) {
   }
 
   if (1 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "RESIDUAL INFORMATION:" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Worst residual is number " << imax + 1 << std::endl;
-    std::cout << "of magnitude " << rmax << std::endl;
-    std::cout << std::endl;
-    std::cout << "Number of \"bad\" residuals is " << ibad << " out of " << bump.neqn << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("RESIDUAL INFORMATION:");
+    std::println();
+    std::println("Worst residual is number {}", imax + 1);
+    std::println("of magnitude {}", rmax);
+    std::println();
+    std::println("Number of \"bad\" residuals is {} out of {}", ibad, bump.neqn);
+    std::println();
   }
 
   if (2 <= bump.iwrite) {
-    std::cout << "Raw residuals:" << std::endl;
-    std::cout << std::endl;
+    std::println("Raw residuals:");
+    std::println();
     size_t idx = 0;
     for (size_t j = 0; j < bump.n_points; j++) {
       if (0 < bump.indx[j * 2]) {
         if (std::abs(bump.res[idx]) <= 1.0e-3) {
-          std::cout << " U " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println(" U {} {} {}", idx + 1, j + 1, bump.res[idx]);
         } else {
-          std::cout << "*U " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println("*U {} {} {}", idx + 1, j + 1, bump.res[idx]);
         }
         idx += 1;
       }
       if (0 < bump.indx[j * 2 + 1]) {
         if (std::abs(bump.res[idx]) <= 1.0e-3) {
-          std::cout << " V " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println(" V {} {} {}", idx + 1, j + 1, bump.res[idx]);
         } else {
-          std::cout << "*V " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println("*V {} {} {}", idx + 1, j + 1, bump.res[idx]);
         }
         idx += 1;
       }
       if (0 < bump.insc[j]) {
         if (std::abs(bump.res[idx]) <= 1.0e-3) {
-          std::cout << " P " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println(" P {} {} {}", idx + 1, j + 1, bump.res[idx]);
         } else {
-          std::cout << "*P " << idx + 1 << " " << j + 1 << " " << bump.res[idx] << std::endl;
+          std::println("*P {} {} {}", idx + 1, j + 1, bump.res[idx]);
         }
         idx += 1;
       }
@@ -1550,17 +1550,17 @@ void setban(Bump& bump) {
   bump.nband = bump.nlband + bump.nlband + 1;
   bump.nrow = bump.nlband + bump.nlband + bump.nlband + 1;
 
-  std::cout << std::endl;
-  std::cout << "SETBAN:" << std::endl;
-  std::cout << std::endl;
-  std::cout << "  Lower bandwidth = " << bump.nlband << std::endl;
-  std::cout << "  Total bandwidth = " << bump.nband << std::endl;
-  std::cout << "  Required matrix rows = " << bump.nrow << std::endl;
+  std::println();
+  std::println("SETBAN:");
+  std::println();
+  std::println("  Lower bandwidth = {}", bump.nlband);
+  std::println("  Total bandwidth = {}", bump.nband);
+  std::println("  Required matrix rows = {}", bump.nrow);
 
   if (bump.maxrow < bump.nrow) {
-    std::cout << "SETBAN - NROW is too large!" << std::endl;
-    std::cout << "The maximum allowed is " << bump.maxrow << std::endl;
-    std::cout << "This problem requires NROW = " << bump.nrow << std::endl;
+    std::println("SETBAN - NROW is too large!");
+    std::println("The maximum allowed is {}", bump.maxrow);
+    std::println("This problem requires NROW = {}", bump.nrow);
     std::exit(1);
   }
 }
@@ -1596,35 +1596,35 @@ void setbas(Bump& bump) {
 //*  SETGRD - set up the geometric grid
 //* --------------------------------------------------------------------
 void setgrd(int ibump, Bump& bump) {
-  std::cout << std::endl;
-  std::cout << "SETGRD:" << std::endl;
-  std::cout << std::endl;
+  std::println();
+  std::println("SETGRD:");
+  std::println();
 
   if (bump.ny < bump.nx) {
     bump._long = true;
-    std::cout << "Using vertical ordering." << std::endl;
+    std::println("Using vertical ordering.");
   } else {
     bump._long = false;
-    std::cout << "Using horizontal ordering." << std::endl;
+    std::println("Using horizontal ordering.");
   }
 
   if (ibump == 0) {
-    std::cout << "No isoparametric elements will be used." << std::endl;
+    std::println("No isoparametric elements will be used.");
   } else if (ibump == 1) {
-    std::cout << "Isoparametric elements directly on bump." << std::endl;
+    std::println("Isoparametric elements directly on bump.");
   } else if (ibump == 2) {
-    std::cout << "All elements above bump are isoparametric." << std::endl;
+    std::println("All elements above bump are isoparametric.");
   } else if (ibump == 3) {
-    std::cout << "All elements are isoparametric." << std::endl;
+    std::println("All elements are isoparametric.");
   } else {
-    std::cout << "Unexpected value of IBUMP = " << ibump << std::endl;
+    std::println("Unexpected value of IBUMP = {}", ibump);
     std::exit(1);
   }
 
   size_t nbleft = (size_t)std::round(bump.xbleft * (double)(bump.mx - 1) / bump.xlngth);
   size_t nbrite = (size_t)std::round(bump.xbrite * (double)(bump.mx - 1) / bump.xlngth);
-  std::cout << "Bump extends from " << bump.xbleft << " at node " << nbleft + 1 << std::endl;
-  std::cout << "               to " << bump.xbrite << " at node " << nbrite + 1 << std::endl;
+  std::println("Bump extends from {} at node {}", bump.xbleft, nbleft + 1);
+  std::println("               to {} at node {}", bump.xbrite, nbrite + 1);
 
   bump.neqn = 0;
   size_t ielemn = 0;
@@ -1756,40 +1756,39 @@ void setgrd(int ibump, Bump& bump) {
   }
 
   if (1 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "     I     indx 1, indx 2, insc" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("     I     indx 1, indx 2, insc");
+    std::println();
     for (size_t i = 0; i < bump.n_points; i++) {
-      std::cout << i + 1 << "\t" << bump.indx[i * 2] << "\t"
-                << bump.indx[i * 2 + 1] << "\t" << bump.insc[i] << std::endl;
+      std::println("{}\t{}\t{}\t{}", i + 1, bump.indx[i * 2], bump.indx[i * 2 + 1], bump.insc[i]);
     }
-    std::cout << std::endl;
-    std::cout << "Isoparametric triangles:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("Isoparametric triangles:");
+    std::println();
     for (size_t i = 0; i < bump.nelemn; i++) {
       if (bump.isotri[i] == 1) {
-        std::cout << i + 1 << std::endl;
+        std::println("{}", i + 1);
       }
     }
-    std::cout << std::endl;
-    std::cout << "   IT   node(IT,*)" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("   IT   node(IT,*)");
+    std::println();
     for (size_t it = 0; it < bump.nelemn; it++) {
-      std::cout << it + 1 << "\t";
+      std::print("{}\t", it + 1);
       for (size_t i = 0; i < 6; i++) {
-        std::cout << bump.node[it * NNODES + i] + 1 << "\t";
+        std::print("{}\t", bump.node[it * NNODES + i] + 1);
       }
-      std::cout << std::endl;
+      std::println();
     }
   }
 
-  std::cout << std::endl;
-  std::cout << "SETGRD: Number of unknowns = " << bump.neqn << std::endl;
+  std::println();
+  std::println("SETGRD: Number of unknowns = {}", bump.neqn);
 
   if (bump.maxeqn < bump.neqn) {
-    std::cout << "SETGRD - Too many unknowns!" << std::endl;
-    std::cout << "The maximum allowed is MAXEQN = " << bump.maxeqn << std::endl;
-    std::cout << "This problem requires neqn = " << bump.neqn << std::endl;
+    std::println("SETGRD - Too many unknowns!");
+    std::println("The maximum allowed is MAXEQN = {}", bump.maxeqn);
+    std::println("This problem requires neqn = {}", bump.neqn);
     std::exit(1);
   }
 }
@@ -1805,11 +1804,11 @@ void setlin(Bump& bump) {
     ? itemp * (2 * bump.ny - 1)
     : itemp;
 
-  std::cout << std::endl;
-  std::cout << "SETLIN:" << std::endl;
-  std::cout << std::endl;
-  std::cout << "  Profile generated at X = " << bump.xprof << std::endl;
-  std::cout << "  which is above node  = " << nodex0 + 1 << std::endl;
+  std::println();
+  std::println("SETLIN:");
+  std::println();
+  std::println("  Profile generated at X = {}", bump.xprof);
+  std::println("  which is above node  = {}", nodex0 + 1);
 
   for (size_t i = 0; i < bump.my; i++) {
     size_t ip = bump._long
@@ -1827,15 +1826,14 @@ void setlin(Bump& bump) {
   }
 
   if (1 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "  Indices of unknowns along the profile line:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("  Indices of unknowns along the profile line:");
+    std::println();
     for (size_t i = 0; i < bump.my; i += 5) {
       for (size_t j = i; j < std::min(i + 5, bump.my); j++) {
-        std::cout.width(5);
-        std::cout << bump.iline[j];
+        std::print("{:5}", bump.iline[j]);
       }
-      std::cout << std::endl;
+      std::println();
     }
   }
 }
@@ -1876,15 +1874,13 @@ void setqud(Bump& bump) {
   }
 
   if (3 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "SETQUD: Element Areas and Quadrature points:" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("SETQUD: Element Areas and Quadrature points:");
+    std::println();
     for (size_t i = 0; i < bump.nelemn; i++) {
-      std::cout << i + 1 << "\t" << bump.area[i] << std::endl;
+      std::println("{}\t{}", i + 1, bump.area[i]);
       for (size_t j = 0; j < NQUAD; j++) {
-        std::cout << i + 1 << "\t" << j + 1 << "\t"
-                  << bump.xm[i * NQUAD + j] << "\t"
-                  << bump.ym[i * NQUAD + j] << std::endl;
+        std::println("{}\t{}\t{}\t{}", i + 1, j + 1, bump.xm[i * NQUAD + j], bump.ym[i * NQUAD + j]);
       }
     }
   }
@@ -1913,13 +1909,13 @@ void setxy(Bump& bump) {
   }
 
   if (2 <= bump.iwrite) {
-    std::cout << std::endl;
-    std::cout << "SETXY:" << std::endl;
-    std::cout << std::endl;
-    std::cout << "     I     XC     YC" << std::endl;
-    std::cout << std::endl;
+    std::println();
+    std::println("SETXY:");
+    std::println();
+    std::println("     I     XC     YC");
+    std::println();
     for (size_t i = 0; i < bump.n_points; i++) {
-      std::cout << i + 1 << "\t" << bump.xc[i] << "\t" << bump.yc[i] << std::endl;
+      std::println("{}\t{}\t{}", i + 1, bump.xc[i], bump.yc[i]);
     }
   }
 }
@@ -2028,7 +2024,7 @@ double ubump(Bump& bump, size_t ip, size_t iqq, size_t it, size_t iukk) {
   } else if (iukk == 2) {
     return -uny[1] * (bump.xc[ip] - 1.0) * (bump.xc[ip] - 3.0);
   } else {
-    std::cout << "UBUMP called for iukk = " << iukk << std::endl;
+    std::println("UBUMP called for iukk = {}", iukk);
     std::exit(1);
   }
 }
