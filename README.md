@@ -131,3 +131,18 @@ pip install tabulate
 ````
 pip install numpy
 ````
+
+
+## Licencia
+
+<div align="center">
+
+[![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
+
+</div>
+
+<div align="left">
+
+Puedes copiar, distribuir y modificar el software siempre que registres los cambios y las fechas en los archivos fuente. Cualquier modificación del software, incluido el código con licencia GPL (mediante compilación), también debe estar disponible bajo la licencia GPL, junto con las instrucciones de compilación e instalación.
+
+</div>
