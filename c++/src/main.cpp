@@ -116,46 +116,68 @@ struct Bump {
 
 // Forward declarations
 void timestamp();
-double bsp(size_t it, size_t iq, size_t id, const std::vector<size_t>& node,
-           const std::vector<double>& xc, double xq,
-           const std::vector<double>& yc, double yq);
-void daxpy_v(int n, double da, const std::vector<double>& dx, int incx,
-             std::vector<double>& dy, int incy);
-void daxpy_m(int n, double da, std::vector<double>& abd, size_t stride,
-             size_t col_x, size_t start_row_x, int incx,
-             size_t col_y, size_t start_row_y, int incy);
-void daxpy(int n, double da, const std::vector<double>& abd_x, size_t stride,
-           size_t col_x, size_t start_row_x, int incx,
-           std::vector<double>& b_y, size_t start_idx_y, int incy);
-double ddot(int n, const std::vector<double>& abd, size_t stride, size_t col,
-            size_t row_start, int incx, const std::vector<double>& b,
-            size_t start_b, int incy);
-int dgbfa(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
-          std::vector<int>& ipvt);
-void dgbsl(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
-           const std::vector<int>& ipvt, std::vector<double>& b, int job);
-void dscal_v(int n, double sa, std::vector<double>& x, int incx);
-void dscal_m(size_t n, double sa, std::vector<double>& abd, size_t stride,
-             size_t col, size_t start_row, int incx);
+double bsp(
+  size_t it, size_t iq, size_t id, const std::vector<size_t> &node,
+  const std::vector<double> &xc, double xq,
+  const std::vector<double> &yc, double yq
+);
+void daxpy_v(
+  int n, double da, const std::vector<double> &dx, int incx,
+  std::vector<double> &dy, int incy
+);
+void daxpy_m(
+  int n, double da, std::vector<double> &abd, size_t stride,
+  size_t col_x, size_t start_row_x, int incx,
+  size_t col_y, size_t start_row_y, int incy
+);
+void daxpy(
+  int n, double da, const std::vector<double> &abd_x, size_t stride,
+  size_t col_x, size_t start_row_x, int incx,
+  std::vector<double> &b_y, size_t start_idx_y, int incy
+);
+double ddot(
+  int n, const std::vector<double> &abd, size_t stride, size_t col,
+  size_t row_start, int incx, const std::vector<double> &b,
+  size_t start_b, int incy
+);
+int dgbfa(
+  std::vector<double> &abd, size_t lda, size_t n, size_t ml, size_t mu,
+  std::vector<int> &ipvt
+);
+void dgbsl(
+  std::vector<double> &abd, size_t lda, size_t n, size_t ml, size_t mu,
+  const std::vector<int> &ipvt, std::vector<double> &b, int job
+);
+void dscal_v(int n, double sa, std::vector<double> &x, int incx);
+void dscal_m(
+  size_t n, double sa, std::vector<double> &abd, size_t stride,
+  size_t col, size_t start_row, int incx
+);
 std::string file_name_inc(const std::string& file_name);
-std::vector<double> getg(const std::vector<double>& f, const std::vector<int>& iline, size_t my);
+std::vector<double> getg(const std::vector<double> &f, const std::vector<int> &iline, size_t my);
 void gram(Bump& bump);
 size_t i4_modp(int i, int j);
 size_t i4_wrap(size_t ival, size_t ilo, size_t ihi);
-size_t idamax_v(int n, const std::vector<double>& dx, int incx);
-size_t idamax_m(int n, const std::vector<double>& abd, size_t stride,
-                size_t col, size_t start_row, int incx);
-int igetl(int i, const std::vector<int>& iline);
+size_t idamax_v(int n, const std::vector<double> &dx, int incx);
+size_t idamax_m(
+  int n, const std::vector<double> &abd, size_t stride,
+  size_t col, size_t start_row, int incx
+);
+int igetl(int i, const std::vector<int> &iline);
 void linsys(Bump& bump, int itype);
 void nstoke(Bump& bump);
-std::tuple<double, double, double> qbf(double xq, double yq, size_t it, size_t inn,
-                                       const std::vector<size_t>& node,
-                                       const std::vector<double>& xc,
-                                       const std::vector<double>& yc);
+std::tuple<double, double, double> qbf(
+  double xq, double yq, size_t it, size_t inn,
+  const std::vector<size_t> &node,
+  const std::vector<double> &xc,
+  const std::vector<double> &yc
+);
 double refbsp(double xq, double yq, size_t iq);
-std::tuple<double, double, double> refqbf(double x, double y, size_t inn,
-                                          double etax, double etay,
-                                          double xix, double xiy);
+std::tuple<double, double, double> refqbf(
+  double x, double y, size_t inn,
+  double etax, double etay,
+  double xix, double xiy
+);
 void resid(Bump& bump);
 void setban(Bump& bump);
 void setbas(Bump& bump);
@@ -166,16 +188,22 @@ void setxy(Bump& bump);
 double ubdry(size_t iuk, double yy);
 double ubump(Bump& bump, size_t ip, size_t iqq, size_t it, size_t iukk);
 std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>>
-  _ubump_uval(Bump& bump, size_t it, double xix, double xiy, double xq, double yq,
-              double _det, double etax, double etay);
+  _ubump_uval(
+    Bump& bump, size_t it, double xix, double xiy, double xq, double yq,
+    double _det, double etax, double etay
+  );
 std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>>
-  uval(double etax, double etay, Bump& bump, size_t it,
-       double xix, double xiy, double xq, double yq);
+  uval(
+    double etax, double etay, Bump& bump, size_t it,
+    double xix, double xiy, double xq, double yq
+  );
 std::tuple<double, double, double, double, double>
-  trans(size_t it, const std::vector<size_t>& node,
-        const std::vector<double>& xc, double xq,
-        const std::vector<double>& yc, double yq);
-void uv_write(Bump& bump, const std::vector<double>& f, std::ofstream& file);
+  trans(
+    size_t it, const std::vector<size_t> &node,
+    const std::vector<double> &xc, double xq,
+    const std::vector<double> &yc, double yq
+  );
+void uv_write(Bump& bump, const std::vector<double> &f, std::ofstream& file);
 void xy_write(Bump& bump, std::ofstream& file);
 
 //* --------------------------------------------------------------------
@@ -404,9 +432,11 @@ void timestamp()
 //* --------------------------------------------------------------------
 //*  BSP - linear basis function for pressure
 //* --------------------------------------------------------------------
-double bsp(size_t it, size_t iq, size_t id, const std::vector<size_t>& node,
-           const std::vector<double>& xc, double xq,
-           const std::vector<double>& yc, double yq) {
+double bsp(
+  size_t it, size_t iq, size_t id, const std::vector<size_t> &node,
+  const std::vector<double> &xc, double xq,
+  const std::vector<double> &yc, double yq
+) {
   size_t l1 = iq;
   size_t l2 = i4_wrap(iq + 1, 0, 2);
   size_t l3 = i4_wrap(iq + 2, 0, 2);
@@ -437,8 +467,10 @@ double bsp(size_t it, size_t iq, size_t id, const std::vector<size_t>& node,
 //* --------------------------------------------------------------------
 //*  DAXPY - constant times a vector plus a vector
 //* --------------------------------------------------------------------
-void daxpy_v(int n, double da, const std::vector<double>& dx, int incx,
-             std::vector<double>& dy, int incy) {
+void daxpy_v(
+  int n, double da, const std::vector<double> &dx, int incx,
+  std::vector<double> &dy, int incy
+) {
   if (n <= 0 || da == 0.0) return;
   int ix, iy;
 
@@ -464,9 +496,11 @@ void daxpy_v(int n, double da, const std::vector<double>& dx, int incx,
   }
 }
 
-void daxpy_m(int n, double da, std::vector<double>& abd, size_t stride,
-             size_t col_x, size_t start_row_x, int incx,
-             size_t col_y, size_t start_row_y, int incy) {
+void daxpy_m(
+  int n, double da, std::vector<double> &abd, size_t stride,
+  size_t col_x, size_t start_row_x, int incx,
+  size_t col_y, size_t start_row_y, int incy
+) {
   if (n <= 0 || da == 0.0) return;
   for (int i = 0; i < n; i++) {
     size_t idx_x = (start_row_x + (i * incx)) * stride + col_x;
@@ -475,9 +509,11 @@ void daxpy_m(int n, double da, std::vector<double>& abd, size_t stride,
   }
 }
 
-void daxpy(int n, double da, const std::vector<double>& abd_x, size_t stride,
-           size_t col_x, size_t start_row_x, int incx,
-           std::vector<double>& b_y, size_t start_idx_y, int incy) {
+void daxpy(
+  int n, double da, const std::vector<double> &abd_x, size_t stride,
+  size_t col_x, size_t start_row_x, int incx,
+  std::vector<double> &b_y, size_t start_idx_y, int incy
+) {
   if (n <= 0 || da == 0.0) return;
   for (int i = 0; i < n; i++) {
     size_t idx_x = (start_row_x + (i * incx)) * stride + col_x;
@@ -489,9 +525,11 @@ void daxpy(int n, double da, const std::vector<double>& abd_x, size_t stride,
 //* --------------------------------------------------------------------
 //*  DDOT - dot product of two vectors
 //* --------------------------------------------------------------------
-double ddot(int n, const std::vector<double>& abd, size_t stride, size_t col,
-            size_t row_start, int incx, const std::vector<double>& b,
-            size_t start_b, int incy) {
+double ddot(
+  int n, const std::vector<double> &abd, size_t stride, size_t col,
+  size_t row_start, int incx, const std::vector<double> &b,
+  size_t start_b, int incy
+) {
   if (n <= 0) return 0.0;
   double dtemp = 0.0;
   if (incx != 1 || incy != 1) {
@@ -521,8 +559,10 @@ double ddot(int n, const std::vector<double>& abd, size_t stride, size_t col,
 //* --------------------------------------------------------------------
 //*  DGBFA - factor a real band matrix by elimination
 //* --------------------------------------------------------------------
-int dgbfa(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
-          std::vector<int>& ipvt) {
+int dgbfa(
+  std::vector<double> &abd, size_t lda, size_t n, size_t ml, size_t mu,
+  std::vector<int> &ipvt
+) {
   size_t m = ml + mu + 1;
   int info = 0;
   size_t j0 = mu + 1;
@@ -592,8 +632,10 @@ int dgbfa(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
 //* --------------------------------------------------------------------
 //*  DGBSL - solve a real banded system factored by DGBFA
 //* --------------------------------------------------------------------
-void dgbsl(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
-           const std::vector<int>& ipvt, std::vector<double>& b, int job) {
+void dgbsl(
+  std::vector<double> &abd, size_t lda, size_t n, size_t ml, size_t mu,
+  const std::vector<int> &ipvt, std::vector<double> &b, int job
+) {
   size_t m = mu + ml + 1;
   if (job == 0) {
     if (0 < ml) {
@@ -644,7 +686,7 @@ void dgbsl(std::vector<double>& abd, size_t lda, size_t n, size_t ml, size_t mu,
 //* --------------------------------------------------------------------
 //*  DSCAL - scale a vector by a constant
 //* --------------------------------------------------------------------
-void dscal_v(int n, double sa, std::vector<double>& x, int incx) {
+void dscal_v(int n, double sa, std::vector<double> &x, int incx) {
   if (n <= 0) return;
   if (incx == 1) {
     int m = n % 5;
@@ -667,8 +709,10 @@ void dscal_v(int n, double sa, std::vector<double>& x, int incx) {
   }
 }
 
-void dscal_m(size_t n, double sa, std::vector<double>& abd, size_t stride,
-             size_t col, size_t start_row, int incx) {
+void dscal_m(
+  size_t n, double sa, std::vector<double> &abd, size_t stride,
+  size_t col, size_t start_row, int incx
+) {
   if (n == 0) return;
   for (size_t i = 0; i < n; i++) {
     abd[(start_row + (i * incx)) * stride + col] *= sa;
@@ -710,7 +754,7 @@ std::string file_name_inc(const std::string& file_name) {
 //* --------------------------------------------------------------------
 //*  GETG - extract values of a quantity along the profile line
 //* --------------------------------------------------------------------
-std::vector<double> getg(const std::vector<double>& f, const std::vector<int>& iline, size_t my) {
+std::vector<double> getg(const std::vector<double> &f, const std::vector<int> &iline, size_t my) {
   std::vector<double> u(my, 0.0);
   for (size_t i = 0; i < my; i++) {
     int j = iline[i];
@@ -842,7 +886,7 @@ size_t i4_wrap(size_t ival, size_t ilo, size_t ihi) {
 //* --------------------------------------------------------------------
 //*  IDAMAX - index of the vector element of maximum absolute value
 //* --------------------------------------------------------------------
-size_t idamax_v(int n, const std::vector<double>& dx, int incx) {
+size_t idamax_v(int n, const std::vector<double> &dx, int incx) {
   if (n < 1 || incx <= 0) {
     return 0;
   }
@@ -877,8 +921,10 @@ size_t idamax_v(int n, const std::vector<double>& dx, int incx) {
   }
 }
 
-size_t idamax_m(int n, const std::vector<double>& abd, size_t stride,
-                size_t col, size_t start_row, int incx) {
+size_t idamax_m(
+  int n, const std::vector<double> &abd, size_t stride,
+  size_t col, size_t start_row, int incx
+) {
   if (n < 1 || incx <= 0) {
     return 0;
   }
@@ -897,7 +943,7 @@ size_t idamax_m(int n, const std::vector<double>& abd, size_t stride,
 //* --------------------------------------------------------------------
 //*  IGETL - get the local unknown number along the profile line
 //* --------------------------------------------------------------------
-int igetl(int i, const std::vector<int>& iline) {
+int igetl(int i, const std::vector<int> &iline) {
   for (size_t j = 0; j < iline.size(); j++) {
     if (iline[j] == i) {
       return (int)(j + 1);
@@ -1121,7 +1167,7 @@ void linsys(Bump& bump, int itype) {
     std::exit(1);
   }
 
-  std::vector<double>& actual_rhs = use_sens ? bump.sens : bump.f;
+  std::vector<double> &actual_rhs = use_sens ? bump.sens : bump.f;
   actual_rhs = rhs;
   dgbsl(bump.a, bump.maxrow, neqn, bump.nlband, bump.nlband, ipvt, actual_rhs, 0);
 }
@@ -1162,10 +1208,12 @@ void nstoke(Bump& bump) {
 //* --------------------------------------------------------------------
 //*  QBF - evaluate quadratic basis functions
 //* --------------------------------------------------------------------
-std::tuple<double, double, double> qbf(double xq, double yq, size_t it, size_t inn,
-                                       const std::vector<size_t>& node,
-                                       const std::vector<double>& xc,
-                                       const std::vector<double>& yc) {
+std::tuple<double, double, double> qbf(
+  double xq, double yq, size_t it, size_t inn,
+  const std::vector<size_t> &node,
+  const std::vector<double> &xc,
+  const std::vector<double> &yc
+) {
   size_t in1, in2, in3;
   size_t i1, i2, i3;
   double d, c, t, s, bb, bx, by;
@@ -1217,9 +1265,11 @@ double refbsp(double xq, double yq, size_t iq) {
 //* --------------------------------------------------------------------
 //*  REFQBF - evaluate quadratic basis functions on reference triangle
 //* --------------------------------------------------------------------
-std::tuple<double, double, double> refqbf(double x, double y, size_t inn,
-                                          double etax, double etay,
-                                          double xix, double xiy) {
+std::tuple<double, double, double> refqbf(
+  double x, double y, size_t inn,
+  double etax, double etay,
+  double xix, double xiy
+) {
   double bb, tbx, tby, bx, by;
 
   if (inn == 0) {
@@ -1877,10 +1927,11 @@ void setxy(Bump& bump) {
 //* --------------------------------------------------------------------
 //*  TRANS - calculate the element transformation mapping
 //* --------------------------------------------------------------------
-std::tuple<double, double, double, double, double>
-trans(size_t it, const std::vector<size_t>& node,
-      const std::vector<double>& xc, double xq,
-      const std::vector<double>& yc, double yq) {
+std::tuple<double, double, double, double, double> trans(
+  size_t it, const std::vector<size_t> &node,
+  const std::vector<double> &xc, double xq,
+  const std::vector<double> &yc, double yq
+) {
   size_t i1 = node[it * NNODES];
   size_t i2 = node[it * NNODES + 1];
   size_t i3 = node[it * NNODES + 2];
@@ -1982,9 +2033,10 @@ double ubump(Bump& bump, size_t ip, size_t iqq, size_t it, size_t iukk) {
   }
 }
 
-std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>>
-_ubump_uval(Bump& bump, size_t it, double xix, double xiy, double xq, double yq,
-            double _det, double etax, double etay) {
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> _ubump_uval(
+  Bump& bump, size_t it, double xix, double xiy, double xq, double yq,
+  double _det, double etax, double etay
+) {
   std::array<double, 2> un = {0.0, 0.0};
   std::array<double, 2> unx = {0.0, 0.0};
   std::array<double, 2> uny = {0.0, 0.0};
@@ -2015,9 +2067,10 @@ _ubump_uval(Bump& bump, size_t it, double xix, double xiy, double xq, double yq,
 //* --------------------------------------------------------------------
 //*  UVAL - evaluate velocities at a given quadrature point
 //* --------------------------------------------------------------------
-std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>>
-uval(double etax, double etay, Bump& bump, size_t it,
-     double xix, double xiy, double xq, double yq) {
+std::tuple<std::array<double, 2>, std::array<double, 2>, std::array<double, 2>> uval(
+  double etax, double etay, Bump& bump, size_t it,
+  double xix, double xiy, double xq, double yq
+) {
   std::array<double, 2> un = {0.0, 0.0};
   std::array<double, 2> unx = {0.0, 0.0};
   std::array<double, 2> uny = {0.0, 0.0};
@@ -2048,7 +2101,7 @@ uval(double etax, double etay, Bump& bump, size_t it,
 //* --------------------------------------------------------------------
 //*  UV_WRITE - write a velocity file
 //* --------------------------------------------------------------------
-void uv_write(Bump& bump, const std::vector<double>& f, std::ofstream& file) {
+void uv_write(Bump& bump, const std::vector<double> &f, std::ofstream& file) {
   for (size_t ip = 0; ip < bump.n_points; ip++) {
     int k_u = bump.indx[ip * 2];
     double u;
