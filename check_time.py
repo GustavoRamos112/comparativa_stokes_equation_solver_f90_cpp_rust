@@ -35,52 +35,86 @@ def medir_tiempo(directorio: str, comando: list, repeticiones: int) -> tuple[lis
     return (tiempos, sum(tiempos) / len(tiempos))
 
 if __name__ == "__main__":
+  _repetitions = 10
+  
+  #! fortran
+  _dir = "fortran"
+  _command: list[str] = ["build/bump.exe"]
+
+  archivo_times: str = "times.txt"
+  dir_times: str = f"{_dir}/{archivo_times}"
+
+  check_times_file(dir_times)
+
+  tiempos_f90, media_f90 = medir_tiempo(
+    directorio=_dir, comando=_command, 
+    repeticiones=_repetitions
+  )
+
+  #! C++
   _dir = "c++"
   _command: list[str] = ["build/main.exe"]
-  _repetitions = 20
   
   archivo_times: str = "times.txt"
   dir_times: str = f"{_dir}/{archivo_times}"
 
-  check_times_file(dir_times)  
+  check_times_file(dir_times)
 
-  tiempos_python: list[float] = []
-  media_python: float = 0.0
-
-  tiempos_python, media_python = medir_tiempo(
+  medir_tiempo(
     directorio=_dir, comando=_command, 
     repeticiones=_repetitions
   )
 
   with open(dir_times, "r") as archivo:
-    tiempos_programa: list[float] = [float(l)/1000 for l in archivo.readlines()]
+    tiempos_cpp: list[float] = [float(l) for l in archivo.readlines()]
 
-  tiempos_programa.pop(0)
+  tiempos_cpp.pop(0)
 
+  media_cpp: float = sum(tiempos_cpp) / len(tiempos_cpp)
+
+  #! rust
+  _dir = "rust"
+  _command: list[str] = ["./target/release/rust.exe"]
   
-  tiempos_generales: list[list[float]] = [
-    [tiempos_python[i], tiempos_programa[i]] 
-    for i in range(len(tiempos_python))
-  ]
+  archivo_times: str = "times.txt"
+  dir_times: str = f"{_dir}/{archivo_times}"
 
-  
-  media_programa: float = sum(tiempos_programa) / len(tiempos_programa)
+  check_times_file(dir_times)
+
+  medir_tiempo(
+    directorio=_dir, comando=_command, 
+    repeticiones=_repetitions
+  )
+
+  with open(dir_times, "r") as archivo:
+    tiempos_rust: list[float] = [float(l) for l in archivo.readlines()]
+
+  tiempos_rust.pop(0)
+
+  media_rust: float = sum(tiempos_rust) / len(tiempos_rust)
 
   print("Repeticiones: ", _repetitions)
 
+  tiempos_generales: list[list[float]] = [
+    [tiempos_f90[i], tiempos_cpp[i], tiempos_rust[i]]
+    for i in range(_repetitions)
+  ]
+
   print(tabulate(
     tiempos_generales, 
-    headers=["Tiempo Python", "Tiempo comando"], 
+    headers=["Tiempo F90", "Tiempo Cpp", "Tiempo Rust"],
     tablefmt="grid")
   )
   print(tabulate(
     [
-      ["Python", media_python],
-      ["Programa", media_programa]
+      ["f90", media_f90],
+      ["c++", media_cpp],
+      ["rust", media_rust]
     ], 
-    headers=["Medida", "Tiempo"], 
-    tablefmt="grid")
-  )
+    headers=["Lenguaje", "Media"], 
+    tablefmt="grid",
+    stralign="center",
+  ))
   
   
 
